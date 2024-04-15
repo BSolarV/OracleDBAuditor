@@ -138,6 +138,22 @@ def find_roles_users(roles, granted_roles_df):
 	return user_roles
 
 # ================================================
+# Tab Privs Processing
+# ================================================
+
+# Function to find privileges for a given user
+def find_roles_users(roles, granted_roles_df):
+	user_roles = {}
+	for role in roles:
+		users = list(granted_roles_df.loc[granted_roles_df['GRANTED_ROLE'] == role, 'GRANTEE'])
+		for user in users:
+			if user not in user_roles:
+				user_roles[user] = list()
+			user_roles[user].append(role)
+	return user_roles
+
+
+# ================================================
 # Audit
 # ================================================
 
@@ -152,6 +168,8 @@ def audit_data(dataframes, outfolder):
 	privs_df = dataframes["privs"]
 	roles_df = dataframes["roles"]
 	java_df = dataframes["check_java"]
+	public_tab_pirvs_df = dataframes["public_tab_privs"]
+	tab_pirvs_df = dataframes["procedures_privs"]
 
 	# ===============================
 	# Audit Logons
@@ -234,13 +252,13 @@ def audit_data(dataframes, outfolder):
 		print()
 		print(roles_privileges_df[roles_privileges_df[list(dangerous_privs.keys())].any(axis=1)])
 		print()
-		roles_privileges_df.to_excel(f"{outfolder}/DBPrivsAudit-Roles.xslx")
+		roles_privileges_df[roles_privileges_df[list(dangerous_privs.keys())].any(axis=1)].to_excel(f"{outfolder}/DBPrivsAudit-Roles.xslx")
 	print("Number of users with dangerous privileges", dangerous_users)
 	if dangerous_users > 0:
 		print()
 		print(users_privs_df[users_privs_df[list(dangerous_privs.keys())].any(axis=1)])
 		print()
-		users_privs_df.to_excel(f"{outfolder}/DBPrivsAudit-Users.xslx")
+		users_privs_df[users_privs_df[list(dangerous_privs.keys())].any(axis=1)].to_excel(f"{outfolder}/DBPrivsAudit-Users.xslx")
 
 	# ===============================
 	# Proxy users
@@ -276,7 +294,50 @@ def audit_data(dataframes, outfolder):
 			java_users_df.to_excel(f"{outfolder}/JavaAudit.xslx")
 		
 
+	# ===============================
+	# Dangerous Tab Privs
+	# ===============================
+ 
+ 	dangerous_tab_privs = set([
+		"UTL_FILE",
+		"UTL_HTTP",
+		"UTL_SMTP",
+		"UTL_TCP",
+		"DBMS_JAVA",
+		"DBMS_JOB",
+		"DBMS_SQ",
+		"DBMS_SCHEDULER",
+		"DBMS_ADVISOR",
+		"DBMS_XSLPROCESSOR",
+		"DBMS_LOB",
+		"DBMS_OBFUSCATION_TOOLKIT",
+		"OWA_UTIL",
+	])
+	
+	public_tab_pirvs_df
+	tab_pirvs_df
 
+	# Check for tab privs on public 
+	exposed_tab_privs = public_tab_pirvs_df[public_tab_pirvs_df["TABLE_NAME"].isin(dangerous_tab_privs)]
+
+	# Print public tab privs
+	print(f"Number of dangerous Tab Privs asigned to Public: {len(exposed_tab_privs)}")
+	if len(exposed_tab_privs) > 0:
+		print()
+		print(exposed_tab_privs)
+		print()
+		exposed_tab_privs.to_excel(f"{outfolder}/TabPrivs-Public.xslx")
+
+	# Check for tab privs on users 
+	users_tab_privs = tab_pirvs_df[tab_pirvs_df["GRANTEE"] != "Public"]
+
+	# Print public tab privs
+	print(f"Number of users with dangerous Tab Privs: {len(users_tab_privs)}")
+	if len(users_tab_privs) > 0:
+		print()
+		print(users_tab_privs)
+		print()
+		users_tab_privs.to_excel(f"{outfolder}/TabPrivs-Users.xslx")
 
 if __name__ == "__main__":
 
