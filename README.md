@@ -1,2 +1,3 @@
 # TO DO
-* [ ] M# OracleDBAuditor
+* [ ] Mitigate `rows will be truncated`
+* [ ] Check script proxy users and parse data
