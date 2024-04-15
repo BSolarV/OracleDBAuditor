@@ -1,4 +1,5 @@
 import os
+import shutil
 import argparse
 import pandas as pd
 
@@ -170,6 +171,7 @@ def audit_data(dataframes, outfolder):
 	java_df = dataframes["check_java"]
 	public_tab_pirvs_df = dataframes["public_tab_privs"]
 	tab_pirvs_df = dataframes["procedures_privs"]
+	parameters_df = dataframes["every_parameter"]
 
 	# ===============================
 	# Audit Logons
@@ -217,6 +219,7 @@ def audit_data(dataframes, outfolder):
 		"UPDATE_PROCEDURE-CREATE_ANY_TRIGGER": ("UPDATE PROCEDURE", "CREATE ANY TRIGGER",),
 		"UPDATE_PROCEDURE-ANALYZE_ANY": ("UPDATE PROCEDURE", "ANALYZE ANY",),
 		"UPDATE_PROCEDURE-CREATE_ANY_INDEX": ("UPDATE PROCEDURE", "CREATE ANY INDEX",),
+		"CREATE_TABLE-CREATE_ANY_DIRECTORY": ("CREATE TABLE", "CREATE ANY DIRECTORY")
 	}
 
 	# Roles Privs
@@ -339,6 +342,15 @@ def audit_data(dataframes, outfolder):
 		print()
 		users_tab_privs.to_excel(f"{outfolder}/TabPrivs-Users.xslx")
 
+	# ===============================
+	# Parameters check
+	# ===============================
+ 
+	parameters_check_df = parameters_df[parameters_df["NAME"].isin(["O7_DICTIONARY_ACCESSIBILITY", "remote_os_authent", "remote_os_role"])]
+	print(f"Missconfigurated Parameters: {len(parameters_check_df[parameters_check_df["VALUE"] == True])}")
+	parameters_check_df.to_excel(f"{outfolder}/Parameters.xslx")
+
+
 if __name__ == "__main__":
 
 	parser = argparse.ArgumentParser(description='Process some files.')
@@ -348,14 +360,20 @@ if __name__ == "__main__":
 	args = parser.parse_args()
 
 	out_folder_path = args.out_folder_path if args.out_folder_path else args.folder_path+"-Audit"
+	
+	if not os.path.exists(out_folder_path):
+		os.makedirs(out_folder_path)
+
+	files_to_copy = [
+		("remote_os_auth.txt", "Remote-OS-Auth.txt"), 
+		("pass_policy.txt", "PasswordPolicy.txt"), 
+		("dba_users.txt", "DBA_Users.txt"), 
+		("db_links.txt", "DB_Links.txt"), 
+		("audit_trails.txt", "AuditTrails.txt")
+	]
+	for src,dst in files_to_copy:
+		shutil.copy(args.folder_path+"/"+src, out_folder_path+"/"+dst)
 
 	dataframes = generate_dataframes(args.folder_path)
 
 	audit_data(dataframes, out_folder_path)
-
-	for name, dataframe in dataframes.items():
-		print(" ========================= ")
-		print(name)
-		print()
-		print(dataframe.head())
-		print()
