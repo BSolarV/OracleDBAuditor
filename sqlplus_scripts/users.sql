@@ -1,0 +1,8 @@
+set wrap off
+set linesize 500 pagesize 1000
+
+connect $USERNAME/$PASS@$HOST:$PORT/$SID
+
+SELECT USERNAME, USER_ID, ACCOUNT_STATUS, CREATED, PROFILE, EXTERNAL_NAME FROM dba_users;
+
+quit
