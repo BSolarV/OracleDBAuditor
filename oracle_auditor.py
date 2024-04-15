@@ -298,7 +298,7 @@ def audit_data(dataframes, outfolder):
 	# Dangerous Tab Privs
 	# ===============================
  
- 	dangerous_tab_privs = set([
+	dangerous_tab_privs = set([
 		"UTL_FILE",
 		"UTL_HTTP",
 		"UTL_SMTP",
