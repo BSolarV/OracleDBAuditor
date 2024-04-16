@@ -174,33 +174,6 @@ def audit_data(dataframes, outfolder):
 	parameters_df = dataframes["every_parameter"]
 
 	# ===============================
-	# Audit Logons
-	# ===============================
-
-	# Convert 'CREATED' and 'LOGON_TIM' columns to datetime
-	users_df['CREATED'] = pd.to_datetime(users_df['CREATED'], format='%d-%b-%y')
-	lastlogon_df['LOGON_TIM'] = pd.to_datetime(lastlogon_df['LOGON_TIM'], format='%d-%b-%y')
-
-	# Merge the dataframes on 'USERNAME'
-	merged_df = pd.merge(users_df, lastlogon_df, on='USERNAME', how='left')
-
-	# Calculate if the last logon was within the last 12 months
-	merged_df['LastLogonWithin12Months'] = merged_df['LOGON_TIM'] >= (pd.to_datetime('now') - pd.DateOffset(months=12))
-
-	# Drop all columns except 'USERNAME' and 'LastLogonWithin12Months'
-	merged_df.drop(merged_df.columns.difference(['USERNAME', 'LOGON_TIM', 'LastLogonWithin12Months']), axis=1, inplace=True)
-	merged_df.sort_values(by='LOGON_TIM', inplace=True, ascending=False)
-
-	# Print results
-	print(" ===== Last Logon =====")
-	count_false = merged_df['LastLogonWithin12Months'].value_counts()[False]
-	print("Number of entries that has not log in in the last 12 months:", count_false)
-	print()
-	print(merged_df[merged_df['LastLogonWithin12Months'] == False])
-	print()
-	merged_df.to_excel(f"{outfolder}/LoginAudit-LastLogonUsers.xslx")
-
-	# ===============================
 	# Audit Privileges Scalation to DBA by Privs Combo
 	# ===============================
 
@@ -242,14 +215,15 @@ def audit_data(dataframes, outfolder):
 		
 	users_privs_df.drop(users_privs_df.columns.difference(['USERNAME', 'User_Privileges']), axis=1, inplace=True)
 
-	# Add columns to users_df for each tuple in dangerous_privs
+	users_dangerous_privs_df = users_privs_df.copy()
+
 	for col_name, priv_tuple in dangerous_privs.items():
-		users_privs_df[col_name] = users_privs_df['User_Privileges'].apply(lambda priv_set: check_privileges(priv_set, priv_tuple))
+		users_dangerous_privs_df[col_name] = users_dangerous_privs_df['User_Privileges'].apply(lambda priv_set: check_privileges(priv_set, priv_tuple))
 
 	# Print results
 	print(" ===== Priviglege Escalation Audit =====")
 	dangerous_roles = roles_privileges_df[list(dangerous_privs.keys())].any(axis=1).sum()
-	dangerous_users = users_privs_df[list(dangerous_privs.keys())].any(axis=1).sum()
+	dangerous_users = users_dangerous_privs_df[list(dangerous_privs.keys())].any(axis=1).sum()
 	print("Number of roles with dangerous privileges", dangerous_roles)
 	if dangerous_roles > 0:
 		print()
@@ -259,9 +233,38 @@ def audit_data(dataframes, outfolder):
 	print("Number of users with dangerous privileges", dangerous_users)
 	if dangerous_users > 0:
 		print()
-		print(users_privs_df[users_privs_df[list(dangerous_privs.keys())].any(axis=1)])
+		print(users_dangerous_privs_df[users_dangerous_privs_df[list(dangerous_privs.keys())].any(axis=1)])
 		print()
-		users_privs_df[users_privs_df[list(dangerous_privs.keys())].any(axis=1)].to_excel(f"{outfolder}/DBPrivsAudit-Users.xslx")
+		users_dangerous_privs_df[users_dangerous_privs_df[list(dangerous_privs.keys())].any(axis=1)].to_excel(f"{outfolder}/DBPrivsAudit-Users.xslx")
+	privs_df.to_excel(f"{outfolder}/DBPrivsAudit-EveryUser.xslx")
+
+	# ===============================
+	# Audit Logons
+	# ===============================
+
+	# Convert 'CREATED' and 'LOGON_TIM' columns to datetime
+	users_df['CREATED'] = pd.to_datetime(users_df['CREATED'], format='%d-%b-%y')
+	lastlogon_df['LOGON_TIM'] = pd.to_datetime(lastlogon_df['LOGON_TIM'], format='%d-%b-%y')
+
+	# Merge the dataframes on 'USERNAME'
+	merged_df = pd.merge(users_df, lastlogon_df, on='USERNAME', how='left')
+
+	# Calculate if the last logon was within the last 12 months
+	merged_df['LastLogonWithin12Months'] = merged_df['LOGON_TIM'] >= (pd.to_datetime('now') - pd.DateOffset(months=12))
+
+	# Drop all columns except 'USERNAME' and 'LastLogonWithin12Months'
+	merged_df.drop(merged_df.columns.difference(['USERNAME', 'LOGON_TIM', 'LastLogonWithin12Months']), axis=1, inplace=True)
+	merged_df.sort_values(by='LOGON_TIM', inplace=True, ascending=False)
+
+	# Print results
+	print(" ===== Last Logon =====")
+	count_false = merged_df['LastLogonWithin12Months'].value_counts()[False]
+	print("Number of entries that has not log in in the last 12 months:", count_false)
+	print()
+	print(merged_df[merged_df['LastLogonWithin12Months'] == False])
+	print()
+	merged_df = pd.merge(merged_df, users_privs_df, on='USERNAME', how='left')
+	merged_df.to_excel(f"{outfolder}/LoginAudit-LastLogonUsers.xslx")
 
 	# ===============================
 	# Proxy users
