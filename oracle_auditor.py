@@ -215,7 +215,7 @@ def audit_data(dataframes, outfolder):
 
 	users_privs_df.to_excel(f"{outfolder}/Users.xlsx")
 		
-	users_privs_df.drop(users_privs_df.columns.difference(['USERNAME', 'User_Privileges']), axis=1, inplace=True)
+	users_privs_df.drop(users_privs_df.columns.difference(['USERNAME', 'ACCOUNT_STATUS', 'User_Privileges']), axis=1, inplace=True)
 
 	users_dangerous_privs_df = users_privs_df.copy()
 
