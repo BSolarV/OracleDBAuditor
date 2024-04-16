@@ -229,14 +229,14 @@ def audit_data(dataframes, outfolder):
 		print()
 		print(roles_privileges_df[roles_privileges_df[list(dangerous_privs.keys())].any(axis=1)])
 		print()
-		roles_privileges_df[roles_privileges_df[list(dangerous_privs.keys())].any(axis=1)].to_excel(f"{outfolder}/DBPrivsAudit-Roles.xslx")
+		roles_privileges_df[roles_privileges_df[list(dangerous_privs.keys())].any(axis=1)].to_excel(f"{outfolder}/DBPrivsAudit-Roles.xlsx")
 	print("Number of users with dangerous privileges", dangerous_users)
 	if dangerous_users > 0:
 		print()
 		print(users_dangerous_privs_df[users_dangerous_privs_df[list(dangerous_privs.keys())].any(axis=1)])
 		print()
-		users_dangerous_privs_df[users_dangerous_privs_df[list(dangerous_privs.keys())].any(axis=1)].to_excel(f"{outfolder}/DBPrivsAudit-Users.xslx")
-	privs_df.to_excel(f"{outfolder}/DBPrivsAudit-EveryUser.xslx")
+		users_dangerous_privs_df[users_dangerous_privs_df[list(dangerous_privs.keys())].any(axis=1)].to_excel(f"{outfolder}/DBPrivsAudit-Users.xlsx")
+	privs_df.to_excel(f"{outfolder}/DBPrivsAudit-EveryUser.xlsx")
 
 	# ===============================
 	# Audit Logons
@@ -264,7 +264,7 @@ def audit_data(dataframes, outfolder):
 	print(merged_df[merged_df['LastLogonWithin12Months'] == False])
 	print()
 	merged_df = pd.merge(merged_df, users_privs_df, on='USERNAME', how='left')
-	merged_df.to_excel(f"{outfolder}/LoginAudit-LastLogonUsers.xslx")
+	merged_df.to_excel(f"{outfolder}/LoginAudit-LastLogonUsers.xlsx")
 
 	# ===============================
 	# Proxy users
@@ -283,7 +283,7 @@ def audit_data(dataframes, outfolder):
 	]
 
 	java_options = java_df.to_dict(orient="index")
-	java_versions = [ java["COMP_NAME"] + f"[{java["VERSION"]}]" for java in java_options.values() ]
+	java_versions = [ java["COMP_NAME"] + f"[{java['VERSION']}]" for java in java_options.values() ]
 	print(f"Amount of Java VMs found: {len(java_versions)}.")
 	if len(java_versions) > 0:
 		for java_version in java_versions:
@@ -297,7 +297,7 @@ def audit_data(dataframes, outfolder):
 			print()
 			print(java_users_df)
 			print()
-			java_users_df.to_excel(f"{outfolder}/JavaAudit.xslx")
+			java_users_df.to_excel(f"{outfolder}/JavaAudit.xlsx")
 		
 
 	# ===============================
@@ -332,7 +332,7 @@ def audit_data(dataframes, outfolder):
 		print()
 		print(exposed_tab_privs)
 		print()
-		exposed_tab_privs.to_excel(f"{outfolder}/TabPrivs-Public.xslx")
+		exposed_tab_privs.to_excel(f"{outfolder}/TabPrivs-Public.xlsx")
 
 	# Check for tab privs on users 
 	users_tab_privs = tab_pirvs_df[tab_pirvs_df["GRANTEE"] != "Public"]
@@ -343,15 +343,15 @@ def audit_data(dataframes, outfolder):
 		print()
 		print(users_tab_privs)
 		print()
-		users_tab_privs.to_excel(f"{outfolder}/TabPrivs-Users.xslx")
+		users_tab_privs.to_excel(f"{outfolder}/TabPrivs-Users.xlsx")
 
 	# ===============================
 	# Parameters check
 	# ===============================
  
 	parameters_check_df = parameters_df[parameters_df["NAME"].isin(["O7_DICTIONARY_ACCESSIBILITY", "remote_os_authent", "remote_os_role"])]
-	print(f"Missconfigurated Parameters: {len(parameters_check_df[parameters_check_df["VALUE"] == True])}")
-	parameters_check_df.to_excel(f"{outfolder}/Parameters.xslx")
+	print(f"Missconfigurated Parameters: {len(parameters_check_df[parameters_check_df['VALUE'] == True])}")
+	parameters_check_df.to_excel(f"{outfolder}/Parameters.xlsx")
 
 
 if __name__ == "__main__":
