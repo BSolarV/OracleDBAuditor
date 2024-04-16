@@ -212,6 +212,8 @@ def audit_data(dataframes, outfolder):
 	# Get privs per user considewring roles
 	users_privs_df = users_df.copy()
 	users_privs_df['User_Privileges'] = users_privs_df['USERNAME'].apply(lambda username: find_user_privileges(username, privs_df, roles_df))
+
+	users_privs_df.to_excel(f"{outfolder}/Users.xslx")
 		
 	users_privs_df.drop(users_privs_df.columns.difference(['USERNAME', 'User_Privileges']), axis=1, inplace=True)
 
