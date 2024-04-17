@@ -31,10 +31,10 @@ def extract_data(lines):
 	while line_index < totallines:
 
 		line = tabstop(lines[line_index])
-		if "rows will be truncated" in line:
+		if "rows will be truncated" in line.lower():
 			line_index += 2
 
-		if not line.strip():  # check empty lines
+		elif not line.strip():  # check empty lines
 			if not headers:  # If headers not defined, assume this line is headers
 				print("[-] Found empty line")
 				print(f"[+] {line_index}")
