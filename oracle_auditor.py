@@ -177,7 +177,6 @@ def audit_data(dataframes, outfolder):
 	public_tab_pirvs_df = dataframes["public_tab_privs"]
 	tab_pirvs_df = dataframes["procedures_privs"]
 	parameters_df = dataframes["every_parameter"]
-	audit_policy_df = dataframes["audit_policy"]
 	network_policies_df = dataframes["network_policies"]
 	dba_users_df = dataframes["dba_users"]
 	proxy_users_df = dataframes["proxy_users"]
@@ -196,7 +195,6 @@ def audit_data(dataframes, outfolder):
 	public_tab_pirvs_df.to_excel(out_folder_path+"/raw_data/public_tab_pirvs_df.xlsx")
 	tab_pirvs_df.to_excel(out_folder_path+"/raw_data/tab_pirvs_df.xlsx")
 	parameters_df.to_excel(out_folder_path+"/raw_data/parameters_df.xlsx")
-	audit_policy_df.to_excel(out_folder_path+"/raw_data/audit_policy_df.xlsx")
 	network_policies_df.to_excel(out_folder_path+"/raw_data/network_policies_df.xlsx")
 	dba_users_df.to_excel(out_folder_path+"/raw_data/dba_users_df.xlsx")
 	proxy_users_df.to_excel(out_folder_path+"/raw_data/proxy_users_df.xlsx")
