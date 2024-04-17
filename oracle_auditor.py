@@ -153,6 +153,11 @@ def find_roles_users(roles, granted_roles_df):
 			user_roles[user].append(role)
 	return user_roles
 
+# ================================================
+# Privs Auditing
+# ================================================
+#def check_priv_audited(username, priv, stm_audit_df):
+#	stm_audit_df.loc[stm_audit_df['username'] == username | stm_audit_df['username']]
 
 # ================================================
 # Audit
@@ -176,6 +181,9 @@ def audit_data(dataframes, outfolder):
 	network_policies_df = dataframes["network_policies"]
 	dba_users_df = dataframes["dba_users"]
 	proxy_users_df = dataframes["proxy_users"]
+	audit_trails_config_df = dataframes["audit_trails_config"]
+	audit_trails_users_statements_df = dataframes["audit_trails_users_statements"]
+	audit_trails_users_objects_df = dataframes["audit_trails_users_objects"]
 
 	if not os.path.exists(out_folder_path+"/raw_data"):
 		os.makedirs(out_folder_path+"/raw_data")
@@ -192,6 +200,15 @@ def audit_data(dataframes, outfolder):
 	network_policies_df.to_excel(out_folder_path+"/raw_data/network_policies_df.xlsx")
 	dba_users_df.to_excel(out_folder_path+"/raw_data/dba_users_df.xlsx")
 	proxy_users_df.to_excel(out_folder_path+"/raw_data/proxy_users_df.xlsx")
+	audit_trails_config_df.to_excel(out_folder_path+"/raw_data/audit_trails_config_df.xlsx")
+	audit_trails_users_statements_df.to_excel(out_folder_path+"/raw_data/audit_trails_users_statements_df.xlsx")
+	audit_trails_users_objects_df.to_excel(out_folder_path+"/raw_data/audit_trails_users_objects_df.xlsx")
+
+	# ===============================
+	# Adding usefull info to users
+	# ===============================
+	system_users = set(('SYS','OUTLN','SYSTEM','PERFSTAT', 'ANONYMOUS',  'APEX_040200',  'APEX_PUBLIC_USER',  'APPQOSSYS',  'AUDSYS',  'CTXSYS',  'DBSNMP',  'DIP',  'DVF',  'DVSYS',  'EXFSYS',  'FLOWS_FILES',  'GSMADMIN_INTERNAL',  'GSMCATUSER',  'GSMUSER',  'LBACSYS',  'MDDATA',  'MDSYS',  'ORACLE_OCM',  'ORDDATA',  'ORDPLUGINS',  'ORDSYS',  'OUTLN',  'SI_INFORMTN_SCHEMA',  'SPATIAL_CSW_ADMIN_USR',  'SPATIAL_WFS_ADMIN_USR',  'SYS',  'SYSBACKUP',  'SYSDG',  'SYSKM',  'SYSTEM',  'WMSYS',  'XDB',  'XS$NULL',  'OLAPSYS',  'OJVMSYS',  'DV_SECANALYST') )
+	users_df["is_system_user"] = users_df["USERNAME"].apply(lambda username: True if username in system_users else False)
 
 	# ===============================
 	# Audit Privileges Scalation to DBA by Privs Combo
@@ -235,9 +252,12 @@ def audit_data(dataframes, outfolder):
 
 	users_privs_df.to_excel(f"{outfolder}/Users.xlsx")
 		
-	users_privs_df.drop(users_privs_df.columns.difference(['USERNAME', 'ACCOUNT_STATUS', 'User_Privileges']), axis=1, inplace=True)
+	users_privs_df.drop(users_privs_df.columns.difference(['USERNAME', "is_system_user", 'ACCOUNT_STATUS', 'User_Privileges']), axis=1, inplace=True)
 
 	users_dangerous_privs_df = users_privs_df.copy()
+
+	critical_privs = set(('ALTER','WRITE','INSERT','DELETE','UPDATE','BECOME USER','ALTER ANY MATERIALIZED VIEW','ALTER ANY ROLE','ALTER ANY TABLE','ALTER DATABASE','ALTER SESSION','ALTER SYSTEM','ALTER USER','CREATE ANY JOB','CREATE ANY MATERIALIZED VIEW','CREATE ANY PROCEDURE','CREATE ANY TABLE','CREATE ANY VIEW','CREATE MATERIALIZED VIEW','CREATE PROCEDURE','CREATE ROLE','CREATE TABLE','CREATE USER','CREATE VIEW','DELETE ANY TABLE','DROP ANY MATERIALIZED VIEW','DROP ANY ROLE','DROP ANY TABLE','DROP ANY VIEW','DROP PUBLIC DATABASE LINK','DROP USER','EXPORT FULL DATABASE','GRANT ANY OBJECT PRIVILEGE','GRANT ANY PRIVILEGE','GRANT ANY ROLE','INSERT ANY TABLE','MERGE ANY VIEW','UPDATE ANY TABLE'))
+	users_dangerous_privs_df["has_critical_privs"] = users_dangerous_privs_df["User_Privileges"].apply(lambda privs_set: True if sum([ 1 for priv in privs_set if priv in critical_privs ]) > 0 else False)
 
 	for col_name, priv_tuple in dangerous_privs.items():
 		users_dangerous_privs_df[col_name] = users_dangerous_privs_df['User_Privileges'].apply(lambda priv_set: check_privileges(priv_set, priv_tuple))
@@ -275,7 +295,7 @@ def audit_data(dataframes, outfolder):
 	merged_df['LastLogonWithin12Months'] = merged_df['LOGON_TIM'] >= (pd.to_datetime('now') - pd.DateOffset(months=12))
 
 	# Drop all columns except 'USERNAME' and 'LastLogonWithin12Months'
-	merged_df.drop(merged_df.columns.difference(['USERNAME', 'LOGON_TIM', 'LastLogonWithin12Months']), axis=1, inplace=True)
+	merged_df.drop(merged_df.columns.difference(['USERNAME', "is_system_user", 'LOGON_TIM', 'LastLogonWithin12Months']), axis=1, inplace=True)
 	merged_df.sort_values(by='LOGON_TIM', inplace=True, ascending=False)
 
 	# Print results
@@ -391,6 +411,32 @@ def audit_data(dataframes, outfolder):
 	parameters_check_df = parameters_df[parameters_df["NAME"].isin(["O7_DICTIONARY_ACCESSIBILITY", "remote_os_authent", "remote_os_role"])]
 	print(f"Missconfigurated Parameters: {len(parameters_check_df[parameters_check_df['VALUE'] == True])}")
 	parameters_check_df.to_excel(f"{outfolder}/Parameters.xlsx")
+
+	# ===============================
+	# Audit Trails
+	# ===============================
+ 
+	# Audit settings ("Audit_trail" should be set to "OS" or "DB" and "audit_sys_operations" should be set to "TRUE")
+	audit_config_values = {}
+	audit_config_values["audit_sys_operations"] = {
+		"value": audit_trails_config_df.loc[audit_trails_config_df['NAME'] == "audit_sys_operations"]["VALUE"].iloc[0],
+		"text": "OK" if audit_trails_config_df.loc[audit_trails_config_df['NAME'] == "audit_sys_operations"]["VALUE"].iloc[0] == True else "Not OK, should be TRUE."
+	}
+	audit_config_values["audit_trail"] = {
+		"value": audit_trails_config_df.loc[audit_trails_config_df['NAME'] == "audit_trail"]["VALUE"].iloc[0],
+		"text": "OK" if audit_trails_config_df.loc[audit_trails_config_df['NAME'] == "audit_trail"]["VALUE"].iloc[0].split(",")[0].strip() in ("DB", "OS") else "Not OK, should be DB or OS."
+	}
+
+	print(f"DB Audit - Audit Sys Operations: {audit_config_values['audit_sys_operations']['value']} ({audit_config_values['audit_sys_operations']['text']})")
+	print(f"DB Audit - Audit Trail: {audit_config_values['audit_trail']['value']} ({audit_config_values['audit_trail']['text']})")
+	print()
+
+	# Current system privileges being audited across the system and by user;
+
+	
+ 
+	# Check current system auditing options across the system and the user;
+
 
 
 if __name__ == "__main__":
