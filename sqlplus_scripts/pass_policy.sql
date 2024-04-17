@@ -5,7 +5,7 @@ connect $USERNAME/$PASS@$HOST:$PORT/$SID
 
 SELECT resource_name,limit from dba_profiles where profile='DEFAULT';
 
-prompt ""
+prompt "=========================="
 prompt Password verify function
 DECLARE
   v_verify_function VARCHAR2(100);

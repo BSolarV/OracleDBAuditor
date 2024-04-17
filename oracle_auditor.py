@@ -172,6 +172,24 @@ def audit_data(dataframes, outfolder):
 	public_tab_pirvs_df = dataframes["public_tab_privs"]
 	tab_pirvs_df = dataframes["procedures_privs"]
 	parameters_df = dataframes["every_parameter"]
+	audit_policy_df = dataframes["audit_policy"]
+	network_policies_df = dataframes["network_policies"]
+	dba_users_df = dataframes["dba_users"]
+
+	if not os.path.exists(out_folder_path+"/raw_data"):
+		os.makedirs(out_folder_path+"/raw_data")
+
+	users_df.to_excel(out_folder_path+"/raw_data/users_df.xlsx")
+	lastlogon_df.to_excel(out_folder_path+"/raw_data/lastlogon_df.xlsx")
+	privs_df.to_excel(out_folder_path+"/raw_data/privs_df.xlsx")
+	roles_df.to_excel(out_folder_path+"/raw_data/roles_df.xlsx")
+	java_df.to_excel(out_folder_path+"/raw_data/java_df.xlsx")
+	public_tab_pirvs_df.to_excel(out_folder_path+"/raw_data/public_tab_pirvs_df.xlsx")
+	tab_pirvs_df.to_excel(out_folder_path+"/raw_data/tab_pirvs_df.xlsx")
+	parameters_df.to_excel(out_folder_path+"/raw_data/parameters_df.xlsx")
+	audit_policy_df.to_excel(out_folder_path+"/raw_data/audit_policy_df.xlsx")
+	network_policies_df.to_excel(out_folder_path+"/raw_data/network_policies_df.xlsx")
+	dba_users_df.to_excel(out_folder_path+"/raw_data/dba_users_df.xlsx")
 
 	# ===============================
 	# Audit Privileges Scalation to DBA by Privs Combo
@@ -372,7 +390,6 @@ if __name__ == "__main__":
 	files_to_copy = [
 		("remote_os_auth.txt", "Remote-OS-Auth.txt"), 
 		("pass_policy.txt", "PasswordPolicy.txt"), 
-		("dba_users.txt", "DBA_Users.txt"), 
 		("db_links.txt", "DB_Links.txt"), 
 		("audit_trails.txt", "AuditTrails.txt")
 	]
