@@ -36,6 +36,10 @@ def extract_data(lines):
 
 		if not line.strip():  # check empty lines
 			if not headers:  # If headers not defined, assume this line is headers
+				print("[-] Found empty line")
+				print(f"[+] {line_index}")
+				print(f"[+] {line_index+1}")
+				print(f"[+] {line_index+2}")
 				headers = [header.strip() for header in lines[line_index+1].strip().split()]
 				col_lenght = list(map(lambda line: len(line) ,lines[line_index+2].split()))
 
