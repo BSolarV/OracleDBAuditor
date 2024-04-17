@@ -10,14 +10,14 @@ fi
 source .env
 
 # Check if SID is empty
-if [ -z "$SID" ]; then
+if [ -z "Report-$SID" ]; then
     exit
 else
-    mkdir -p $SID
+    mkdir -p Report-$SID
 fi
 
 # Define a list of SQL files
-sql_files=("check_java" "dba_users" "db_links" "lastLogon" "pass_policy" "privs" "procedures_privs" "public_tab_privs" "remote_os_auth" "roles" "users" "audit_trails" "every_parameter" "version")
+sql_files=("audit_policy" "audit_trails" "dba_registry" "dba_users" "db_links" "every_parameter" "last_logon" "network_policies" "pass_policy" "privs" "procedures_privs" "proxy_users" "public_tab_privs" "remote_os_auth" "roles" "users" "version")
 
 for sql_file in "${sql_files[@]}"; do
 
