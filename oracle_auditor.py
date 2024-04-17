@@ -56,7 +56,7 @@ def process_file(file_path):
 	return df
 
 def generate_dataframes(folder_path):
-	files_to_skip = {"version.txt", "remote_os_auth.txt", "db_links.txt", "audit_trails.txt"}
+	files_to_skip = {"remote_os_auth.txt", "pass_policy.txt", "db_links.txt"}
 	files = os.listdir(folder_path)
 	dataframes = {}
 	for file_name in files:
