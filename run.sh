@@ -34,7 +34,7 @@ for sql_file in "${sql_files[@]}"; do
     sed -i "s/\$SID/$SID/g" ${sql_file}_tmp.sql
 
     # Execute SQL commands using SQL*Plus
-    cat ${sql_file}_tmp.sql | sqlplus -s /nolog > Report-$SID/${sql_file}.o
+    cat ${sql_file}_tmp.sql | sqlplus -s /nolog > Report-$SID/${sql_file}.txt
 
     # Clean up temporary files
     rm ${sql_file}_tmp.sql
