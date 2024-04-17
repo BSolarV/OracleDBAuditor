@@ -1,5 +1,5 @@
 set wrap off
-set pagesize 1000
+set linesize 1000 pagesize 1000
 
 connect $USERNAME/$PASS@$HOST:$PORT/$SID
 
