@@ -32,18 +32,18 @@ def extract_data(lines):
 
 		line = tabstop(lines[line_index])
 		if "rows will be truncated" in line.lower():
-			line_index += 2
+			line_index += 1
 
 		elif not line.strip():  # check empty lines
 			if not headers:  # If headers not defined, assume this line is headers
 				print("[-] Found empty line")
-				print(f"[+] {line_index}")
-				print(f"[+] {line_index+1}")
-				print(f"[+] {line_index+2}")
+				print(f"[+] {lines[line_index]}")
+				print(f"[+] {lines[line_index+1]}")
+				print(f"[+] {lines[line_index+2]}")
 				headers = [header.strip() for header in lines[line_index+1].strip().split()]
 				col_lenght = list(map(lambda line: len(line) ,lines[line_index+2].split()))
 
-			line_index += 2
+			line_index += 1
 
 		else:
 			row_data = [ line[sum(col_lenght[:i]) + i : sum(col_lenght[:i]) + i + col_lenght[i] ].strip() for i in range(len(col_lenght))]
