@@ -17,7 +17,7 @@ else
 fi
 
 # Define a list of SQL files
-sql_files=("audit_trails_config" "audit_trails_users_objects" "audit_trails_users_statements" "dba_registry" "dba_users" "db_links" "every_parameter" "last_logon" "network_policies" "pass_policy" "privs" "procedures_privs" "proxy_users" "public_tab_privs" "remote_os_auth" "roles" "users" "version")
+sql_files=("audit_trails_config" "audit_trails_users_objects" "audit_trails_users_statements" "dba_registry" "dba_users" "db_links" "every_parameter" "last_logon" "pass_policy" "privs" "procedures_privs" "proxy_users" "public_tab_privs" "remote_os_auth" "roles" "users" "version")
 
 for sql_file in "${sql_files[@]}"; do
 
