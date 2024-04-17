@@ -455,8 +455,7 @@ if __name__ == "__main__":
 	files_to_copy = [
 		("remote_os_auth.txt", "Remote-OS-Auth.txt"), 
 		("pass_policy.txt", "PasswordPolicy.txt"), 
-		("db_links.txt", "DB_Links.txt"), 
-		("audit_trails.txt", "AuditTrails.txt")
+		("db_links.txt", "DB_Links.txt")
 	]
 	for src,dst in files_to_copy:
 		shutil.copy(args.folder_path+"/"+src, out_folder_path+"/"+dst)
