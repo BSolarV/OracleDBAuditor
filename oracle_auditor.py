@@ -175,6 +175,7 @@ def audit_data(dataframes, outfolder):
 	audit_policy_df = dataframes["audit_policy"]
 	network_policies_df = dataframes["network_policies"]
 	dba_users_df = dataframes["dba_users"]
+	proxy_users_df = dataframes["proxy_users"]
 
 	if not os.path.exists(out_folder_path+"/raw_data"):
 		os.makedirs(out_folder_path+"/raw_data")
@@ -190,6 +191,7 @@ def audit_data(dataframes, outfolder):
 	audit_policy_df.to_excel(out_folder_path+"/raw_data/audit_policy_df.xlsx")
 	network_policies_df.to_excel(out_folder_path+"/raw_data/network_policies_df.xlsx")
 	dba_users_df.to_excel(out_folder_path+"/raw_data/dba_users_df.xlsx")
+	proxy_users_df.to_excel(out_folder_path+"/raw_data/proxy_users_df.xlsx")
 
 	# ===============================
 	# Audit Privileges Scalation to DBA by Privs Combo
@@ -290,7 +292,12 @@ def audit_data(dataframes, outfolder):
 	# Proxy users
 	# ===============================
 
-	# ToDo
+	print("Number of proxy users found:", len(proxy_users_df))
+	if len(proxy_users_df) > 0:
+		print()
+		print(proxy_users_df)
+		print()
+		proxy_users_df.to_excel(f"{outfolder}/ProxyUsers.xlsx")
 
 	# ===============================
 	# Java to OS
