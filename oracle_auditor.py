@@ -168,7 +168,7 @@ def audit_data(dataframes, outfolder):
 	lastlogon_df = dataframes["last_logon"]
 	privs_df = dataframes["privs"]
 	roles_df = dataframes["roles"]
-	java_df = dataframes["check_java"]
+	dba_registry_df = dataframes["dba_registry"]
 	public_tab_pirvs_df = dataframes["public_tab_privs"]
 	tab_pirvs_df = dataframes["procedures_privs"]
 	parameters_df = dataframes["every_parameter"]
@@ -184,7 +184,7 @@ def audit_data(dataframes, outfolder):
 	lastlogon_df.to_excel(out_folder_path+"/raw_data/lastlogon_df.xlsx")
 	privs_df.to_excel(out_folder_path+"/raw_data/privs_df.xlsx")
 	roles_df.to_excel(out_folder_path+"/raw_data/roles_df.xlsx")
-	java_df.to_excel(out_folder_path+"/raw_data/java_df.xlsx")
+	dba_registry_df.to_excel(out_folder_path+"/raw_data/dba_registry_df.xlsx")
 	public_tab_pirvs_df.to_excel(out_folder_path+"/raw_data/public_tab_pirvs_df.xlsx")
 	tab_pirvs_df.to_excel(out_folder_path+"/raw_data/tab_pirvs_df.xlsx")
 	parameters_df.to_excel(out_folder_path+"/raw_data/parameters_df.xlsx")
@@ -300,6 +300,17 @@ def audit_data(dataframes, outfolder):
 		proxy_users_df.to_excel(f"{outfolder}/ProxyUsers.xlsx")
 
 	# ===============================
+	# Regisry Check
+	# ===============================
+ 
+	print("Number of installed components:", len(dba_registry_df))
+	if len(dba_registry_df) > 0:
+		print()
+		print(dba_registry_df)
+		print()
+		dba_registry_df.to_excel(f"{outfolder}/InstalledComponents.xlsx")
+
+	# ===============================
 	# Java to OS
 	# ===============================
 
@@ -309,12 +320,13 @@ def audit_data(dataframes, outfolder):
 		"JAVADEBUGPRIV"
 	]
 
-	java_options = java_df.to_dict(orient="index")
+	java_options = dba_registry_df[dba_registry_df["COMP_NAME"].str.lower().contains("java")].to_dict(orient="index")
 	java_versions = [ java["COMP_NAME"] + f"[{java['VERSION']}]" for java in java_options.values() ]
 	print(f"Amount of Java VMs found: {len(java_versions)}.")
 	if len(java_versions) > 0:
 		for java_version in java_versions:
 			print(f"	{java_version}")
+		
 		print()
 
 		javaroles_by_users = find_roles_users(dangerous_java_roles, roles_df)
