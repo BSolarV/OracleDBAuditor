@@ -56,7 +56,7 @@ def process_file(file_path):
 	return df
 
 def generate_dataframes(folder_path):
-	files_to_skip = {"remote_os_auth.txt", "pass_policy.txt", "db_links.txt"}
+	files_to_skip = {"version.txt", "remote_os_auth.txt", "pass_policy.txt", "db_links.txt"}
 	files = os.listdir(folder_path)
 	dataframes = {}
 	for file_name in files:
@@ -449,6 +449,7 @@ if __name__ == "__main__":
 		os.makedirs(out_folder_path)
 
 	files_to_copy = [
+		("version.txt", "Version.txt"), 
 		("remote_os_auth.txt", "Remote-OS-Auth.txt"), 
 		("pass_policy.txt", "PasswordPolicy.txt"), 
 		("db_links.txt", "DB_Links.txt")
