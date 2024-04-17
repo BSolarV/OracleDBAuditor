@@ -43,7 +43,7 @@ def extract_data(lines):
 				headers = [header.strip() for header in lines[line_index+1].strip().split()]
 				col_lenght = list(map(lambda line: len(line) ,lines[line_index+2].split()))
 
-			line_index += 1
+			line_index += 2
 
 		else:
 			row_data = [ line[sum(col_lenght[:i]) + i : sum(col_lenght[:i]) + i + col_lenght[i] ].strip() for i in range(len(col_lenght))]
