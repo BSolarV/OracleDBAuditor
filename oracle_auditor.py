@@ -278,15 +278,23 @@ def audit_data(dataframes, outfolder):
 		roles_privileges_df[roles_privileges_df[list(dangerous_privs.keys())].any(axis=1)].to_excel(f"{outfolder}/DBPrivsAudit-Roles.xlsx")
 	print("Number of users with dangerous privileges", dangerous_users)
 	if dangerous_users > 0:
+		print("+ Users that can dump password hashes:")
+		users_dangerous_privs_dict = users_dangerous_privs_df[(users_dangerous_privs_df["SELECT_ANY_DICTIONARY"].eq(True) & users_dangerous_privs_df["is_system_user"].eq(False))].to_dict("index")
+		for index in users_dangerous_privs_dict:
+			print(users_dangerous_privs_dict[index]["USERNAME"])
+			for key in dangerous_privs:
+				if key == "SELECT_ANY_DICTIONARY":
+					print(f"	- {' + '.join(dangerous_privs[key])}")
 		print()
-		users_dangerous_privs_dict = users_dangerous_privs_df[users_dangerous_privs_df[list(dangerous_privs.keys())].any(axis=1) & users_dangerous_privs_df["is_system_user"] == False].to_dict("index")
+		print("+ Users that can elevate privileges:")
+		users_dangerous_privs_dict = users_dangerous_privs_df.loc[(users_dangerous_privs_df["CAN_ELEVATE_PRIVS"].eq(True) & users_dangerous_privs_df["is_system_user"].eq(False))].to_dict("index")
 		for index in users_dangerous_privs_dict:
 			print(users_dangerous_privs_dict[index]["USERNAME"])
 			for key in dangerous_privs:
 				if key == "SELECT_ANY_DICTIONARY":
 					continue
 				if users_dangerous_privs_dict[index][key] == True:
-					print(f"	- {" + ".join(dangerous_privs[key])}")
+					print(f"	- {' + '.join(dangerous_privs[key])}")
 		print()
 		users_dangerous_privs_df[users_dangerous_privs_df[list(dangerous_privs.keys())].any(axis=1)].to_excel(f"{outfolder}/DBPrivsAudit-Users.xlsx")
 	privs_df.to_excel(f"{outfolder}/DBPrivsAudit-EveryUser.xlsx")
@@ -373,7 +381,6 @@ def audit_data(dataframes, outfolder):
 	# ===============================
 	# Dangerous Tab Privs
 	# ===============================
- 
 	dangerous_tab_privs = set([
 		"UTL_FILE",
 		"UTL_HTTP",
@@ -389,13 +396,11 @@ def audit_data(dataframes, outfolder):
 		"DBMS_OBFUSCATION_TOOLKIT",
 		"OWA_UTIL",
 	])
-	
-	public_tab_pirvs_df
-	tab_pirvs_df
 
 	# Check for tab privs on public 
-	exposed_tab_privs = public_tab_pirvs_df[public_tab_pirvs_df["TABLE_NAME"].isin(dangerous_tab_privs)]
-
+	exposed_tab_privs = tab_pirvs_df[tab_pirvs_df['GRANTEE'] == "PUBLIC"]
+	#exposed_tab_privs = public_tab_pirvs_df[public_tab_pirvs_df["TABLE_NAME"].isin(dangerous_tab_privs)]
+	
 	# Print public tab privs
 	print(f"Number of dangerous Tab Privs asigned to Public: {len(exposed_tab_privs)}")
 	if len(exposed_tab_privs) > 0:
@@ -403,15 +408,25 @@ def audit_data(dataframes, outfolder):
 		print(exposed_tab_privs)
 		print()
 		exposed_tab_privs.to_excel(f"{outfolder}/TabPrivs-Public.xlsx")
+		
 
 	# Check for tab privs on users 
-	users_tab_privs = tab_pirvs_df[tab_pirvs_df["GRANTEE"] != "PUBLIC"]
+	full_tab_pirvs_df = pd.merge(tab_pirvs_df, users_df[["USERNAME", "ACCOUNT_STATUS", "is_system_user"]], how='left', left_on = 'GRANTEE', right_on = 'USERNAME').drop(columns='USERNAME')
+	users_tab_privs = full_tab_pirvs_df[full_tab_pirvs_df["GRANTEE"] != "PUBLIC"]
 
-	# Print public tab privs
-	print(f"Number of users with dangerous Tab Privs: {len(users_tab_privs)}")
+	# Print users with tab privs
+	print(f"Number of dangerous Tab Privs granted: {len(users_tab_privs)}")
 	if len(users_tab_privs) > 0:
-		print()
-		print(users_tab_privs)
+		users_dangerous_tab_privs_dict = users_tab_privs[users_tab_privs["is_system_user"] == False].to_dict("index")
+		users_dangerous_tab_privs_dict_parsed = {}
+		for index in users_dangerous_tab_privs_dict:
+			if users_dangerous_tab_privs_dict[index]["GRANTEE"] not in users_dangerous_tab_privs_dict_parsed:
+				users_dangerous_tab_privs_dict_parsed[users_dangerous_tab_privs_dict[index]["GRANTEE"]] = set([])
+			users_dangerous_tab_privs_dict_parsed[users_dangerous_tab_privs_dict[index]["GRANTEE"]].add(users_dangerous_tab_privs_dict[index]["TABLE_NAME"])
+		for username in users_dangerous_tab_privs_dict_parsed:
+			print(username)
+			for tab_priv in users_dangerous_tab_privs_dict_parsed[username]:
+				print(f"	- {tab_priv}")
 		print()
 		users_tab_privs.to_excel(f"{outfolder}/TabPrivs-Users.xlsx")
 
