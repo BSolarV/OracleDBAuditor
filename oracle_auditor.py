@@ -26,20 +26,22 @@ def read_file(file_path):
 def extract_data(lines):
 	data = []
 	headers = None
-	totallines = len(lines) - 1
+	totallines = len(lines)
 	line_index = 0
 	while line_index < totallines:
 
 		line = tabstop(lines[line_index])
 		if "rows will be truncated" in line.lower():
 			line_index += 1
+		elif "selected." in line.lower():
+			pass
 
 		elif not line.strip():  # check empty lines
 			if not headers:  # If headers not defined, assume this line is headers
-				print("[-] Found empty line")
-				print(f"[+] {lines[line_index]}")
-				print(f"[+] {lines[line_index+1]}")
-				print(f"[+] {lines[line_index+2]}")
+				#print("[-] Found empty line")
+				#print(f"[+] {lines[line_index]}")
+				#print(f"[+] {lines[line_index+1]}")
+				#print(f"[+] {lines[line_index+2]}")
 				headers = [header.strip() for header in lines[line_index+1].strip().split()]
 				col_lenght = list(map(lambda line: len(line) ,lines[line_index+2].split()))
 
@@ -261,6 +263,8 @@ def audit_data(dataframes, outfolder):
 
 	for col_name, priv_tuple in dangerous_privs.items():
 		users_dangerous_privs_df[col_name] = users_dangerous_privs_df['User_Privileges'].apply(lambda priv_set: check_privileges(priv_set, priv_tuple))
+	
+	users_dangerous_privs_df["CAN_ELEVATE_PRIVS"] = users_dangerous_privs_df[list(dangerous_privs.keys())[1:]].any(axis=1)
 
 	# Print results
 	print(" ===== Priviglege Escalation Audit =====")
@@ -340,7 +344,7 @@ def audit_data(dataframes, outfolder):
 		"JAVADEBUGPRIV"
 	]
 
-	java_options = dba_registry_df[dba_registry_df["COMP_NAME"].str.lower().contains("java")].to_dict(orient="index")
+	java_options = dba_registry_df[dba_registry_df["COMP_NAME"].str.lower().str.contains("java")].to_dict(orient="index")
 	java_versions = [ java["COMP_NAME"] + f"[{java['VERSION']}]" for java in java_options.values() ]
 	print(f"Amount of Java VMs found: {len(java_versions)}.")
 	if len(java_versions) > 0:
@@ -394,7 +398,7 @@ def audit_data(dataframes, outfolder):
 		exposed_tab_privs.to_excel(f"{outfolder}/TabPrivs-Public.xlsx")
 
 	# Check for tab privs on users 
-	users_tab_privs = tab_pirvs_df[tab_pirvs_df["GRANTEE"] != "Public"]
+	users_tab_privs = tab_pirvs_df[tab_pirvs_df["GRANTEE"] != "PUBLIC"]
 
 	# Print public tab privs
 	print(f"Number of users with dangerous Tab Privs: {len(users_tab_privs)}")
@@ -419,12 +423,12 @@ def audit_data(dataframes, outfolder):
 	# Audit settings ("Audit_trail" should be set to "OS" or "DB" and "audit_sys_operations" should be set to "TRUE")
 	audit_config_values = {}
 	audit_config_values["audit_sys_operations"] = {
-		"value": audit_trails_config_df.loc[audit_trails_config_df['NAME'] == "audit_sys_operations"]["VALUE"].iloc[0],
-		"text": "OK" if audit_trails_config_df.loc[audit_trails_config_df['NAME'] == "audit_sys_operations"]["VALUE"].iloc[0] == True else "Not OK, should be TRUE."
+		"value": audit_trails_config_df.loc[audit_trails_config_df['NAME'] == "audit_sys_operations", "VALUE"].iloc[0],
+		"text": "OK" if audit_trails_config_df.loc[audit_trails_config_df['NAME'] == "audit_sys_operations", "VALUE"].iloc[0] == True else "Not OK, should be TRUE."
 	}
 	audit_config_values["audit_trail"] = {
-		"value": audit_trails_config_df.loc[audit_trails_config_df['NAME'] == "audit_trail"]["VALUE"].iloc[0],
-		"text": "OK" if audit_trails_config_df.loc[audit_trails_config_df['NAME'] == "audit_trail"]["VALUE"].iloc[0].split(",")[0].strip() in ("DB", "OS") else "Not OK, should be DB or OS."
+		"value": audit_trails_config_df.loc[audit_trails_config_df['NAME'] == "audit_trail", "VALUE"].iloc[0],
+		"text": "OK" if audit_trails_config_df.loc[audit_trails_config_df['NAME'] == "audit_trail", "VALUE"].iloc[0].split(",")[0].strip() in ("DB", "OS") else "Not OK, should be DB or OS."
 	}
 
 	print(f"DB Audit - Audit Sys Operations: {audit_config_values['audit_sys_operations']['value']} ({audit_config_values['audit_sys_operations']['text']})")
