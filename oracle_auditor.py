@@ -279,7 +279,14 @@ def audit_data(dataframes, outfolder):
 	print("Number of users with dangerous privileges", dangerous_users)
 	if dangerous_users > 0:
 		print()
-		print(users_dangerous_privs_df[users_dangerous_privs_df[list(dangerous_privs.keys())].any(axis=1)])
+		users_dangerous_privs_dict = users_dangerous_privs_df[users_dangerous_privs_df[list(dangerous_privs.keys())].any(axis=1) & users_dangerous_privs_df["is_system_user"] == False].to_dict("index")
+		for index in users_dangerous_privs_dict:
+			print(users_dangerous_privs_dict[index]["USERNAME"])
+			for key in dangerous_privs:
+				if key == "SELECT_ANY_DICTIONARY":
+					continue
+				if users_dangerous_privs_dict[index][key] == True:
+					print(f"	- {" + ".join(dangerous_privs[key])}")
 		print()
 		users_dangerous_privs_df[users_dangerous_privs_df[list(dangerous_privs.keys())].any(axis=1)].to_excel(f"{outfolder}/DBPrivsAudit-Users.xlsx")
 	privs_df.to_excel(f"{outfolder}/DBPrivsAudit-EveryUser.xlsx")
