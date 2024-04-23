@@ -99,7 +99,8 @@ def find_roles_privileges(role, privs_df, granted_roles_df, history=''):
 			sub_privileges = sub_privileges | find_roles_privileges(sub_role, privs_df, granted_roles_df, history+"|"+role)
 		
 		# Combine privileges from this role and its sub-roles
-		role_privileges[role] = privileges.update(sub_privileges)
+		privileges.update(sub_privileges)
+		role_privileges[role] = privileges
 		
 	return role_privileges[role] if role_privileges[role] else set()
 
