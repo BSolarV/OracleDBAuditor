@@ -467,10 +467,10 @@ if __name__ == "__main__":
 	if not os.path.exists(out_folder_path):
 		os.makedirs(out_folder_path)
 
-	files_to_copy = [
-		("pass_policy_function.txt", "pass_policy_function.txt")
-	]
-	for src,dst in files_to_copy:
+	files_to_copy = {
+		"pass_policy_function.txt": "pass_policy_function.txt"
+	}
+	for src,dst in files_to_copy.items():
 		shutil.copy(args.folder_path+"/"+src, out_folder_path+"/"+dst)
 
 	dataframes = generate_dataframes(args.folder_path, set(files_to_copy.keys()))
