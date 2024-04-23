@@ -61,8 +61,7 @@ def process_file(file_path):
 	df = pd.DataFrame(data, columns=headers)
 	return df
 
-def generate_dataframes(folder_path):
-	files_to_skip = {"version.txt", "remote_os_auth.txt", "pass_policy.txt", "db_links.txt"}
+def generate_dataframes(folder_path, files_to_skip):
 	files = os.listdir(folder_path)
 	dataframes = {}
 	for file_name in files:
@@ -191,20 +190,9 @@ def audit_data(dataframes, outfolder):
 
 	if not os.path.exists(out_folder_path+"/raw_data"):
 		os.makedirs(out_folder_path+"/raw_data")
-
-	users_df.to_excel(out_folder_path+"/raw_data/users_df.xlsx")
-	lastlogon_df.to_excel(out_folder_path+"/raw_data/lastlogon_df.xlsx")
-	privs_df.to_excel(out_folder_path+"/raw_data/privs_df.xlsx")
-	roles_df.to_excel(out_folder_path+"/raw_data/roles_df.xlsx")
-	dba_registry_df.to_excel(out_folder_path+"/raw_data/dba_registry_df.xlsx")
-	public_tab_pirvs_df.to_excel(out_folder_path+"/raw_data/public_tab_pirvs_df.xlsx")
-	tab_pirvs_df.to_excel(out_folder_path+"/raw_data/tab_pirvs_df.xlsx")
-	parameters_df.to_excel(out_folder_path+"/raw_data/parameters_df.xlsx")
-	dba_users_df.to_excel(out_folder_path+"/raw_data/dba_users_df.xlsx")
-	proxy_users_df.to_excel(out_folder_path+"/raw_data/proxy_users_df.xlsx")
-	audit_trails_config_df.to_excel(out_folder_path+"/raw_data/audit_trails_config_df.xlsx")
-	audit_trails_users_statements_df.to_excel(out_folder_path+"/raw_data/audit_trails_users_statements_df.xlsx")
-	audit_trails_users_objects_df.to_excel(out_folder_path+"/raw_data/audit_trails_users_objects_df.xlsx")
+		
+	for df_name, dataframe in dataframes.items():
+		dataframe.to_excel(out_folder_path+f"/raw_data/{df_name}.xlsx")
 
 	# ===============================
 	# Adding usefull info to users
@@ -453,6 +441,7 @@ def audit_data(dataframes, outfolder):
 if __name__ == "__main__":
 
 	parser = argparse.ArgumentParser(description='Process some files.')
+	parser.add_argument("-dbv", "--database-version", type=str, help='Specify Oracle DB version (10g, 11g, 12c, 19c).', required=True)
 	parser.add_argument("-f", "--folder-path", type=str, help='Path to the folder containing .txt files', required=True)
 	parser.add_argument("-o", "--out-folder-path", type=str, help='Path to the folder containing .txt files')
 	parser.add_argument('-v', '--verbose', help="Verbosity Level. (-v to -vvv)", action='count', default=0)
@@ -464,14 +453,11 @@ if __name__ == "__main__":
 		os.makedirs(out_folder_path)
 
 	files_to_copy = [
-		("version.txt", "Version.txt"), 
-		("remote_os_auth.txt", "Remote-OS-Auth.txt"), 
-		("pass_policy.txt", "PasswordPolicy.txt"), 
-		("db_links.txt", "DB_Links.txt")
+		("pass_policy_function.txt", "pass_policy_function.txt")
 	]
 	for src,dst in files_to_copy:
 		shutil.copy(args.folder_path+"/"+src, out_folder_path+"/"+dst)
 
-	dataframes = generate_dataframes(args.folder_path)
+	dataframes = generate_dataframes(args.folder_path, set(files_to_copy.keys()))
 
 	audit_data(dataframes, out_folder_path)

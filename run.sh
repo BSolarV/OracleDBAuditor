@@ -1,42 +1,154 @@
 #!/bin/bash
 
-# Check if .env file exists
-if [ ! -f .env ]; then
-    echo "Error: .env file not found."
-    exit 1
-fi
+# Default values
+DB_VERSION=""
+PASSWORD_HASHES=false
+ENV_FILE=".env"
 
-# Load variables from .env file
-source .env
+# Help function
+function display_help {
+    echo "Usage: $0 -dbv DATABASE_VERSION [-p] [-e ENV_FILE] [-h]"
+    echo "Options:"
+    echo "  -dbv, --database-version    Specify Oracle DB version (10g, 11g, 12c, 19c)."
+    echo "  -p, --password-hashes       Retrieve password hashes of users."
+    echo "  -e, --env-file              Specify the .env file (default is .env)"
+    echo "  -h, --help                  Display this help message."
+    exit 0
+}
 
-# Check if SID is empty
-if [ -z "Report-$SID" ]; then
-    exit
-else
-    mkdir -p Report-$SID
-fi
+# Function to validate database version
+function validate_db_version {
+    case "$1" in
+        10g|11g|12c|19c)
+            ;;
+        *)
+            echo "Error: Invalid database version. Valid values are '10g', '11g', '12c', '19c'."
+            display_help
+            ;;
+    esac
+}
 
-# Define a list of SQL files
-sql_files=("audit_trails_config" "audit_trails_users_objects" "audit_trails_users_statements" "dba_registry" "dba_users" "db_links" "every_parameter" "last_logon" "pass_policy" "privs" "procedures_privs" "proxy_users" "public_tab_privs" "remote_os_auth" "roles" "users" "version")
+# Function to execute main code
+function main {
+    # Check if .env file exists
+    if [ ! -f "$ENV_FILE" ]; then
+        echo "Error: $ENV_FILE file not found."
+        exit 1
+    fi
 
-for sql_file in "${sql_files[@]}"; do
+    # Load variables from .env file
+    source "$ENV_FILE"
 
-    echo "Running $sql_file..."
+    # Check if SID is empty
+    if [ -z "Report-$SID" ]; then
+        exit
+    else
+        mkdir -p Report-$SID
+    fi
 
-    # Backup original commands.sql file
-    cp sqlplus_scripts/$sql_file.sql ${sql_file}_tmp.sql
+    # Run scripts for every DB version
+    for sql_file_raw in ./sqlplus_scripts/*.sql; do
+        
+        echo "Running $sql_file_raw..."
+        sql_file=${sql_file_raw%.*}
 
-    # Replace variables in a temporary file
-    sed -i "s/\$USERNAME/$USERNAME/g" ${sql_file}_tmp.sql
-    sed -i "s/\$PASS/$PASS/g" ${sql_file}_tmp.sql
-    sed -i "s/\$HOST/$HOST/g" ${sql_file}_tmp.sql
-    sed -i "s/\$PORT/$PORT/g" ${sql_file}_tmp.sql
-    sed -i "s/\$SID/$SID/g" ${sql_file}_tmp.sql
+        # Backup original commands.sql file
+        cp sqlplus_scripts/$sql_file.sql ${sql_file}_tmp.sql
 
-    # Execute SQL commands using SQL*Plus
-    cat ${sql_file}_tmp.sql | sqlplus -s /nolog > Report-$SID/${sql_file}.txt
+        # Replace variables in a temporary file
+        sed -i "s/\$USERNAME/$USERNAME/g" ${sql_file}_tmp.sql
+        sed -i "s/\$PASS/$PASS/g" ${sql_file}_tmp.sql
+        sed -i "s/\$HOST/$HOST/g" ${sql_file}_tmp.sql
+        sed -i "s/\$PORT/$PORT/g" ${sql_file}_tmp.sql
+        sed -i "s/\$SID/$SID/g" ${sql_file}_tmp.sql
 
-    # Clean up temporary files
-    rm ${sql_file}_tmp.sql
+        # Execute SQL commands using SQL*Plus
+        cat ${sql_file}_tmp.sql | sqlplus -s /nolog > Report-$SID/${sql_file}.txt
 
+        # Clean up temporary files
+        rm ${sql_file}_tmp.sql
+    done
+
+    # Run scripts specific to a version
+    for sql_file_raw in ./sqlplus_scripts/$DB_VERSION/*.sql; do
+
+        echo "Running $sql_file_raw..."
+        sql_file=${sql_file_raw%.*}
+
+        # Backup original commands.sql file
+        cp sqlplus_scripts/$DB_VERSION/$sql_file.sql ${sql_file}_tmp.sql
+
+        # Replace variables in a temporary file
+        sed -i "s/\$USERNAME/$USERNAME/g" ${sql_file}_tmp.sql
+        sed -i "s/\$PASS/$PASS/g" ${sql_file}_tmp.sql
+        sed -i "s/\$HOST/$HOST/g" ${sql_file}_tmp.sql
+        sed -i "s/\$PORT/$PORT/g" ${sql_file}_tmp.sql
+        sed -i "s/\$SID/$SID/g" ${sql_file}_tmp.sql
+
+        # Execute SQL commands using SQL*Plus
+        cat ${sql_file}_tmp.sql | sqlplus -s /nolog > Report-$SID/${sql_file}.txt
+
+        # Clean up temporary files
+        rm ${sql_file}_tmp.sql
+    done
+
+    # Check and run password hashes dump
+    if [ $PASSWORD_HASHES ]; then
+        for sql_file_raw in ./sqlplus_scripts/$DB_VERSION/pass_dump/*.sql; do
+            
+            echo "Running $sql_file_raw..."
+            sql_file=${sql_file_raw%.*}
+
+            # Backup original commands.sql file
+            cp sqlplus_scripts/$DB_VERSION/pass_dump/$sql_file.sql ${sql_file}_tmp.sql
+
+            # Replace variables in a temporary file
+            sed -i "s/\$USERNAME/$USERNAME/g" ${sql_file}_tmp.sql
+            sed -i "s/\$PASS/$PASS/g" ${sql_file}_tmp.sql
+            sed -i "s/\$HOST/$HOST/g" ${sql_file}_tmp.sql
+            sed -i "s/\$PORT/$PORT/g" ${sql_file}_tmp.sql
+            sed -i "s/\$SID/$SID/g" ${sql_file}_tmp.sql
+
+            # Execute SQL commands using SQL*Plus
+            cat ${sql_file}_tmp.sql | sqlplus -s /nolog > Report-$SID/${sql_file}.txt
+
+            # Clean up temporary files
+            rm ${sql_file}_tmp.sql
+        done
+    fi
+}
+
+# Parse command-line arguments
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -dbv|--database-version)
+            validate_db_version "$2"
+            DB_VERSION="$2"
+            shift 2
+            ;;
+        -p|--password-hashes)
+            PASSWORD_HASHES=true
+            shift
+            ;;
+        -e|--env-file)
+            ENV_FILE="$2"
+            shift 2
+            ;;
+        -h|--help)
+            display_help
+            ;;
+        *)
+            echo "Error: Invalid argument $1"
+            display_help
+            ;;
+    esac
 done
+
+# Check if -dbv parameter is provided
+if [ -z "$DB_VERSION" ]; then
+    echo "Error: -dbv parameter is required."
+    display_help
+fi
+
+# Execute main code
+main
