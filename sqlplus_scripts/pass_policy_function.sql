@@ -1,25 +1,21 @@
 set wrap off
+set serveroutput on size 30000;
 set linesize 500 pagesize 1000
 
 connect $USERNAME/$PASS@$HOST:$PORT/$SID
 
-DECLARE
-  v_verify_function VARCHAR2(100);
-  v_ddl_query VARCHAR2(200);
+var v_verify_function VARCHAR2(100);
 BEGIN
-  -- Recuperar el valor de PASSWORD_VERIFY_FUNCTION
-  SELECT PASSWORD_VERIFY_FUNCTION INTO v_verify_function
+  SELECT limit INTO :v_verify_function
   FROM dba_profiles
   WHERE profile = 'DEFAULT'
   AND resource_name = 'PASSWORD_VERIFY_FUNCTION';
 
-  -- Verificar si el valor no es NULL y ejecutar la consulta adicional
-  IF v_verify_function IS NOT NULL THEN
-	v_ddl_query := 'select dbms_metadata.get_ddl(''FUNCTION'',''' || v_verify_function || ''') from dual;';
-	EXECUTE IMMEDIATE v_ddl_query;
+  CASE :v_verify_function WHEN NULL THEN
+  EXECUTE IMMEDIATE 'SELECT dbms_metadata.get_ddl(''FUNCTION'',''' || :v_verify_function || ''') FROM dual;';
   ELSE
-	DBMS_OUTPUT.PUT_LINE('No password verify found.');
-  END IF;
+  dbms_output.put_line('No password function found.');
+  END CASE;
 END;
 /
 
