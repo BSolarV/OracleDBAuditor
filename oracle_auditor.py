@@ -334,7 +334,7 @@ def audit_data(dataframes, outfolder):
 	priv_esc_str += "\n"
 
 	if dangerous_users > 0:
-		priv_esc_str += f"[-] Users that can dump password hashes:\n"
+		priv_esc_str += f"[-] Common users that can dump password hashes: {len(users_dangerous_privs_df[(users_dangerous_privs_df['SELECT_ANY_DICTIONARY'].eq(True) & users_dangerous_privs_df['is_system_user'].eq(False))])}\n"
 
 		users_dangerous_privs_dict = users_dangerous_privs_df[(users_dangerous_privs_df["SELECT_ANY_DICTIONARY"].eq(True) & users_dangerous_privs_df["is_system_user"].eq(False))].to_dict("index")
 
@@ -346,7 +346,7 @@ def audit_data(dataframes, outfolder):
 		
 		priv_esc_str += "\n"
 		
-		priv_esc_str += f"[-] Users that can elevate privileges:" + "\n"
+		priv_esc_str += f"[-] Common uers that can elevate privileges: {len(users_dangerous_privs_df.loc[(users_dangerous_privs_df['CAN_ELEVATE_PRIVS'].eq(True) & users_dangerous_privs_df['is_system_user'].eq(False))])}" + "\n"
 		
 		users_dangerous_privs_dict = users_dangerous_privs_df.loc[(users_dangerous_privs_df["CAN_ELEVATE_PRIVS"].eq(True) & users_dangerous_privs_df["is_system_user"].eq(False))].to_dict("index")
 		for index in users_dangerous_privs_dict:
@@ -632,14 +632,20 @@ def audit_data(dataframes, outfolder):
 
 	parameters_str += "\n"
  
-	parameters_check_df = parameters_df[parameters_df["NAME"].isin(["O7_DICTIONARY_ACCESSIBILITY", "remote_os_authent", "remote_os_role"])]
+	parameters_check_df = parameters_df[parameters_df["NAME"].isin(["O7_DICTIONARY_ACCESSIBILITY", "remote_os_authent", "remote_os_roles"])]
 	parameters_check_dict = parameters_check_df.to_dict(orient="index")
 	parameters_str += f"Missconfigurated Parameters: {len(parameters_check_df[parameters_check_df['VALUE'] != True])}" + "\n"
+	
+	values_parameters_functions = {
+		'O7_DICTIONARY_ACCESSIBILITY': lambda value: "OK" if str(value).lower() == "false" else "Not OK. Should be False.",
+		'remote_os_authent': lambda value: "OK" if str(value).lower() == "false" else "Not OK. Should be False.",
+		'remote_os_roles': lambda value: "OK" if str(value).lower() == "false" else "Not OK. Should be False.",
+	}
 	
 	for dictionary in parameters_check_dict.values():
 		name = dictionary["NAME"]
 		value = dictionary["VALUE"]
-		parameters_str += f"{name}\tvalue:{value}\t({'OK' if value == True else 'Not OK. Should be True'})" + "\n"
+		parameters_str += f"{name}\tvalue:{value}\t({values_parameters_functions[name](value)})" + "\n"
 	
 	parameters_check_df.to_excel(f"{outfolder}/Parameters.xlsx")
 
@@ -666,7 +672,7 @@ def audit_data(dataframes, outfolder):
 	audit_trails_str += f"Missconfigurated Audit Parameters: {len(audit_parameters_check_df[audit_parameters_check_df['VALUE'] != True])}" + "\n"
 	
 	values_audit_functions = {
-		'audit_sys_operations': lambda value: "OK" if value == True else "Not OK. Should be True.",
+		'audit_sys_operations': lambda value: "OK" if str(value).lower() == "true" else "Not OK. Should be True.",
 		'audit_trail': lambda value: "OK" if value.split(",")[0].strip() in ("DB", "OS") else "Not OK. Should be DB or OS"
 	}
 
