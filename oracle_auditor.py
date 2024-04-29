@@ -1,9 +1,10 @@
 import os
 import shutil
 import argparse
+from math import floor
 import pandas as pd
 
-OUTPUT_WITH = 64
+OUTPUT_WITH = 96
 
 # ================================================
 # Utility
@@ -69,7 +70,7 @@ def generate_dataframes(folder_path, files_to_skip):
 	for file_name in files:
 		if file_name in files_to_skip:
 			continue
-		print(f"Processing {file_name}")
+		#print(f"Processing {file_name}")
 		file_path = os.path.join(folder_path, file_name)
 		df = process_file(file_path)
 		dataframes[file_name.split(".")[0]] = df
@@ -210,8 +211,10 @@ def audit_data(dataframes, outfolder):
 	db_version_str += " Database version ".center(OUTPUT_WITH, "=") + "\n"
 	db_version_str += "".center(OUTPUT_WITH, "=") + "\n"
 
+	db_version_str += "\n"
 	db_version_str += version_df.to_string(index=False) + "\n"
-	db_version_str += "" + "\n"
+	
+	db_version_str += "\n"
 	db_version_str += "[+] Patches installed" + "\n"
 	db_version_str += patches_df.to_string(index=False) + "\n"
 
@@ -230,7 +233,9 @@ def audit_data(dataframes, outfolder):
 	pass_policy_str += " Password Policy ".center(OUTPUT_WITH, "=") + "\n"
 	pass_policy_str += "".center(OUTPUT_WITH, "=") + "\n"
 
+	pass_policy_str += "\n"
 	pass_policy_str += pass_policy_df.to_string(index=False) + "\n"
+	
 	pass_policy_str += "\n"
 	pass_policy_str += "[+] Password Policy function" + "\n"
 	
@@ -315,26 +320,26 @@ def audit_data(dataframes, outfolder):
 	priv_esc_str += "".center(OUTPUT_WITH, "=") + "\n"
 	priv_esc_str += " Priviglege Escalation Audit ".center(OUTPUT_WITH, "=") + "\n"
 	priv_esc_str += "".center(OUTPUT_WITH, "=") + "\n"
+	
 
 	dangerous_roles = roles_privileges_df[list(dangerous_privs.keys())].any(axis=1).sum()
 	dangerous_users = users_dangerous_privs_df[list(dangerous_privs.keys())].any(axis=1).sum()
 	
+	priv_esc_str += "\n"
+	priv_esc_str += f"[+] Number of roles with dangerous privileges: {dangerous_roles}" + "\n"
+	
 	if dangerous_roles > 0:
-		
-		priv_esc_str += f"[+] Number of roles with dangerous privileges: {dangerous_roles}" + "\n"
-		priv_esc_str += "\n"
 		priv_esc_str += roles_privileges_df[roles_privileges_df[list(dangerous_privs.keys())].any(axis=1)][["GRANTED_ROLE", "SELECT_ANY_DICTIONARY", "CAN_ELEVATE_PRIVS"]].to_string() + "\n"
 		priv_esc_str += "\n"
 		priv_esc_str += f"More details can be fount at {outfolder}/DBPrivsAudit-Roles.xlsx." + "\n"
-		priv_esc_str += "\n"
 		roles_privileges_df[roles_privileges_df[list(dangerous_privs.keys())].any(axis=1)].to_excel(f"{outfolder}/DBPrivsAudit-Roles.xlsx")
 		
+	priv_esc_str += "\n"
 	priv_esc_str += f"[+] Number of users with dangerous privileges: {dangerous_users}" + "\n"
 
-	priv_esc_str += "\n"
-
 	if dangerous_users > 0:
-		priv_esc_str += f"[-] Common users that can dump password hashes: {len(users_dangerous_privs_df[(users_dangerous_privs_df['SELECT_ANY_DICTIONARY'].eq(True) & users_dangerous_privs_df['is_system_user'].eq(False))])}\n"
+		priv_esc_str += "\n"
+		priv_esc_str += f"[-] Common users that can dump password hashes: {len(users_dangerous_privs_df[(users_dangerous_privs_df['SELECT_ANY_DICTIONARY'].eq(True) & users_dangerous_privs_df['is_system_user'].eq(False))])}" + "\n"
 
 		users_dangerous_privs_dict = users_dangerous_privs_df[(users_dangerous_privs_df["SELECT_ANY_DICTIONARY"].eq(True) & users_dangerous_privs_df["is_system_user"].eq(False))].to_dict("index")
 
@@ -345,7 +350,6 @@ def audit_data(dataframes, outfolder):
 					priv_esc_str += f"	- {' + '.join(dangerous_privs[key])}" + "\n"
 		
 		priv_esc_str += "\n"
-		
 		priv_esc_str += f"[-] Common uers that can elevate privileges: {len(users_dangerous_privs_df.loc[(users_dangerous_privs_df['CAN_ELEVATE_PRIVS'].eq(True) & users_dangerous_privs_df['is_system_user'].eq(False))])}" + "\n"
 		
 		users_dangerous_privs_dict = users_dangerous_privs_df.loc[(users_dangerous_privs_df["CAN_ELEVATE_PRIVS"].eq(True) & users_dangerous_privs_df["is_system_user"].eq(False))].to_dict("index")
@@ -357,12 +361,12 @@ def audit_data(dataframes, outfolder):
 				if users_dangerous_privs_dict[index][key] == True:
 					priv_esc_str += f"	- {' + '.join(dangerous_privs[key])}" + "\n"
 		
-		priv_esc_str += "\n"
 		
 		users_dangerous_privs_df[users_dangerous_privs_df[list(dangerous_privs.keys())].any(axis=1)].to_excel(f"{outfolder}/DBPrivsAudit-Users.xlsx")
 
 	privs_df.to_excel(f"{outfolder}/DBPrivsAudit-EveryUser.xlsx")
 
+	priv_esc_str += "\n"
 	print(priv_esc_str)
 
 	with open(outfolder+"/DB_PrivsAudit.txt", "w") as f:
@@ -379,8 +383,16 @@ def audit_data(dataframes, outfolder):
 	dba_users_str += "".center(OUTPUT_WITH, "=") + "\n"
 
 	merged_dba_users_df = pd.merge(dba_users_df, users_df, on='USERNAME', how='left')
-
+	
+	dba_users_str += "\n"
 	dba_users_str += merged_dba_users_df[["USERNAME", "ACCOUNT_STATUS", "is_system_user"]].to_string() + "\n"
+	
+	dba_users_str += "\n"
+	
+	print(dba_users_str)
+	
+	with open(outfolder+"/DB_DBAUsers.txt", "w") as f:
+		f.write(dba_users_str)
 
 	# ===============================
 	# Dangerous Tab Privs
@@ -391,17 +403,17 @@ def audit_data(dataframes, outfolder):
 	tab_pirvs_str += "".center(OUTPUT_WITH, "=") + "\n"
 	tab_pirvs_str += " Dangerous Tab Privs ".center(OUTPUT_WITH, "=") + "\n"
 	tab_pirvs_str += "".center(OUTPUT_WITH, "=") + "\n"
+	
 
 	# Check for tab privs on public 
 	exposed_tab_privs = tab_pirvs_df[tab_pirvs_df['GRANTEE'] == "PUBLIC"]
 	#exposed_tab_privs = public_tab_pirvs_df[public_tab_pirvs_df["TABLE_NAME"].isin(dangerous_tab_privs)]
 	
 	# Print public tab privs
+	tab_pirvs_str += "\n"
 	tab_pirvs_str += f"[+] Number of dangerous Tab Privs asigned to Public: {len(exposed_tab_privs)}" + "\n"
 	if len(exposed_tab_privs) > 0: 
-		tab_pirvs_str += "\n"
 		tab_pirvs_str += exposed_tab_privs.to_string() + "\n"
-		tab_pirvs_str += "\n"
 		exposed_tab_privs.to_excel(f"{outfolder}/TabPrivs-Public.xlsx")
 		
 	# Check for tab privs on users 
@@ -409,6 +421,7 @@ def audit_data(dataframes, outfolder):
 	users_tab_privs = full_tab_pirvs_df[full_tab_pirvs_df["GRANTEE"] != "PUBLIC"]
 
 	# Print users with tab privs
+	tab_pirvs_str += "\n"
 	tab_pirvs_str += f"[+] Number of dangerous Tab Privs granted: {len(users_tab_privs)}" + "\n"
 	if len(users_tab_privs) > 0:
 		users_dangerous_tab_privs_dict = users_tab_privs[users_tab_privs["is_system_user"] == False].to_dict(orient="index")
@@ -421,9 +434,9 @@ def audit_data(dataframes, outfolder):
 			tab_pirvs_str += username + "\n"
 			for tab_priv in users_dangerous_tab_privs_dict_parsed[username]:
 				tab_pirvs_str += f"	- {tab_priv}" + "\n"
-		tab_pirvs_str += "\n"
 		users_tab_privs.to_excel(f"{outfolder}/TabPrivs-Users.xlsx")
 
+	tab_pirvs_str += "\n"
 	print(tab_pirvs_str)
 
 	with open(outfolder+"/DB_TabPrivs.txt", "w") as f:
@@ -455,15 +468,23 @@ def audit_data(dataframes, outfolder):
 	logon_audit_str += "".center(OUTPUT_WITH, "=") + "\n"
 	logon_audit_str += " Last Login Audit ".center(OUTPUT_WITH, "=") + "\n"
 	logon_audit_str += "".center(OUTPUT_WITH, "=") + "\n"
-
+	
 	count_false = merged_df['LastLogonWithin12Months'].value_counts()[False]
+	
+	logon_audit_str += "\n"
 	logon_audit_str += f"[+] Number of entries that has not log in in the last 12 months: {count_false}" + "\n"
-	logon_audit_str += "\n"
-	logon_audit_str += merged_df[merged_df['LastLogonWithin12Months'] == False].to_string(index=False) + "\n"
-	logon_audit_str += "\n"
+	
+	logon_audit_str += merged_df[merged_df['LastLogonWithin12Months'] == False].head(25).to_string(index=False) + "\n"
+	logon_audit_str += f"	List truncated to 25. Check the entire list at 'LoginAudit-LastLogonUsers.xlsx'." + "\n" if len(merged_df[merged_df['LastLogonWithin12Months'] == False]) > 25 else ""
+	
 	merged_df = pd.merge(merged_df, users_privs_df, on='USERNAME', how='left')
 	merged_df.to_excel(f"{outfolder}/LoginAudit-LastLogonUsers.xlsx")
+
+	logon_audit_str += "\n"
 	print(logon_audit_str)
+	
+	with open(outfolder+"/DB_LastLogons.txt", "w") as f:
+		f.write(logon_audit_str)
 
 	# ===============================
 	# Proxy users
@@ -475,13 +496,13 @@ def audit_data(dataframes, outfolder):
 	proxy_users_str += " Proxy Users ".center(OUTPUT_WITH, "=") + "\n"
 	proxy_users_str += "".center(OUTPUT_WITH, "=") + "\n"
 
+	proxy_users_str += "\n"
 	proxy_users_str += f"[+] Number of proxy users found: {len(proxy_users_df)}" + "\n"
 	if len(proxy_users_df) > 0:
-		proxy_users_str += "\n"
 		proxy_users_str += proxy_users_df.to_string() + "\n"
-		proxy_users_str += "\n"
 		proxy_users_df.to_excel(f"{outfolder}/ProxyUsers.xlsx")
 
+	proxy_users_str += "\n"
 	print(proxy_users_str)
 
 	with open(outfolder+"/DB_LastLoginAudit.txt", "w") as f:
@@ -498,23 +519,22 @@ def audit_data(dataframes, outfolder):
 	db_links_str += "".center(OUTPUT_WITH, "=") + "\n"
 
 	public_db_links_df = db_links_df[db_links_df["OWNER"] == "PUBLIC"]
- 
+	
+	db_links_str += "\n" 
 	db_links_str += f"[+] Number of PUBLIC DB Links: {len(public_db_links_df)}" + "\n"
 	if len(public_db_links_df) > 0:
-		db_links_str += "\n"
 		db_links_str += public_db_links_df[["OWNER", "USERNAME", "HOST"]].to_string() + "\n"
-		db_links_str += "\n"
 		public_db_links_df.to_excel(f"{outfolder}/PublicDBLinks.xlsx")
 
 	dangerous_db_links_df = db_links_df[db_links_df["USERNAME"].isin(system_users)]
 
+	db_links_str += "\n" 
 	db_links_str += f"[+] Number of DB Links to System Users: {len(dangerous_db_links_df)}" + "\n"
 	if len(public_db_links_df) > 0:
-		db_links_str += "\n"
 		db_links_str += dangerous_db_links_df[["OWNER", "USERNAME", "HOST"]].to_string() + "\n"
-		db_links_str += "\n"
 		db_links_df.to_excel(f"{outfolder}/DBLinks.xlsx")
 	
+	db_links_str += "\n" 
 	print(db_links_str)
 
 	with open(outfolder+"/DB_Links.txt", "w") as f:
@@ -541,20 +561,21 @@ def audit_data(dataframes, outfolder):
 	remote_auth_parameters_df = parameters_df[parameters_df["NAME"].isin(["remote_os_roles", "remote_os_authent", "os_authent_prefix", "ldap_directory_access", "ldap_directory_sysauth"])]
 	remote_auth_parameters_dict = remote_auth_parameters_df.to_dict(orient="index")
 	
+	remote_auth_str += "\n" 
 	remote_auth_str += f"[+] Remote OS Auth parameters:" + "\n"
 	for dictionary in remote_auth_parameters_dict.values():
 		name = dictionary["NAME"]
 		value = dictionary["VALUE"]
-		remote_auth_str += f"{name}\tvalue:{value}\t({remote_auth_parameters_check[name](value)})" + "\n"
-
+		remote_auth_str += f"{name.ljust(floor(OUTPUT_WITH/3))} value:{(' ' + value).ljust(floor(OUTPUT_WITH/3))} ({remote_auth_parameters_check[name](value)})" + "\n"
+		
+	remote_auth_str += "\n"
 	remote_auth_str += f"[+] Remote OS Auth available users: {len(remote_os_auth_users_df)}" + "\n"
 	if len(remote_os_auth_users_df) > 0:
-		remote_auth_str += "\n"
 		remote_auth_str += remote_os_auth_users_df.to_string() + "\n"
-		remote_auth_str += "\n"
 
+	remote_auth_str += "\n" 
 	print(remote_auth_str)
-
+	
 	with open(outfolder+"/DB_RemoteAuth.txt", "w") as f:
 		f.write(remote_auth_str)
 	
@@ -568,13 +589,13 @@ def audit_data(dataframes, outfolder):
 	installed_components_str += " Installed Components ".center(OUTPUT_WITH, "=") + "\n"
 	installed_components_str += "".center(OUTPUT_WITH, "=") + "\n"
  
+	installed_components_str += "\n" 
 	installed_components_str += f"[+] Number of installed components: {len(dba_registry_df)}" + "\n"
 	if len(dba_registry_df) > 0:
-		installed_components_str += "\n"
 		installed_components_str += dba_registry_df.to_string() + "\n"
-		installed_components_str += "\n"
 		dba_registry_df.to_excel(f"{outfolder}/InstalledComponents.xlsx")
 	
+	remote_auth_str += "\n" 
 	print(installed_components_str)
 
 	with open(outfolder+"/DB_InstalledComponents.txt", "w") as f:
@@ -598,28 +619,27 @@ def audit_data(dataframes, outfolder):
 
 	java_options = dba_registry_df[dba_registry_df["COMP_NAME"].str.lower().str.contains("JAVA Virtual Machine".lower())].to_dict(orient="index")
 	java_versions = [ java["COMP_NAME"] + f"[{java['VERSION']}]" for java in java_options.values() ]
+
+	java_audit_str += "\n" 
+	java_audit_str += f"[+] Java VM found:" + "\n"
 	if len(java_versions) > 0:
-		java_audit_str += f"[+] Java VM found:" + "\n"
 		for java_version in java_versions:
 			java_audit_str += f"\t{java_version}" + "\n"
 		
-		java_audit_str += "\n"
-
 		javaroles_by_users = find_roles_users(dangerous_java_roles, roles_df)
+		java_audit_str += "\n"
 		java_audit_str += f"[-] Number of users that can execute commands via java: {len(javaroles_by_users)}" + "\n"
 		if len(javaroles_by_users) > 0:
 			java_users_df = pd.DataFrame.from_dict( {"username": list(javaroles_by_users.keys()), "roles": list(javaroles_by_users.values())} )
-			java_audit_str += "\n"
 			java_audit_str += java_users_df.to_string() + "\n"
-			java_audit_str += "\n"
 			java_users_df.to_excel(f"{outfolder}/JavaAudit.xlsx")
 	
+	java_audit_str += "\n" 
 	print(java_audit_str)
 
 	with open(outfolder+"/DB_JavaVMs.txt", "w") as f:
 		f.write(java_audit_str)
 
-	
 	# ===============================
 	# Parameters check
 	# ===============================
@@ -630,11 +650,11 @@ def audit_data(dataframes, outfolder):
 	parameters_str += " Parameters Audit ".center(OUTPUT_WITH, "=") + "\n"
 	parameters_str += "".center(OUTPUT_WITH, "=") + "\n"
 
-	parameters_str += "\n"
- 
 	parameters_check_df = parameters_df[parameters_df["NAME"].isin(["O7_DICTIONARY_ACCESSIBILITY", "remote_os_authent", "remote_os_roles"])]
 	parameters_check_dict = parameters_check_df.to_dict(orient="index")
-	parameters_str += f"Missconfigurated Parameters: {len(parameters_check_df[parameters_check_df['VALUE'] != True])}" + "\n"
+	
+	parameters_str += "\n"
+	parameters_str += f"[+] Missconfigurated Parameters: {len(parameters_check_df[parameters_check_df['VALUE'] != True])}" + "\n"
 	
 	values_parameters_functions = {
 		'O7_DICTIONARY_ACCESSIBILITY': lambda value: "OK" if str(value).lower() == "false" else "Not OK. Should be False.",
@@ -645,7 +665,7 @@ def audit_data(dataframes, outfolder):
 	for dictionary in parameters_check_dict.values():
 		name = dictionary["NAME"]
 		value = dictionary["VALUE"]
-		parameters_str += f"{name}\tvalue:{value}\t({values_parameters_functions[name](value)})" + "\n"
+		parameters_str += f"{name.ljust(floor(OUTPUT_WITH/3))} value:{(' ' + value).ljust(floor(OUTPUT_WITH/3))} ({values_parameters_functions[name](value)})" + "\n"
 	
 	parameters_check_df.to_excel(f"{outfolder}/Parameters.xlsx")
 
@@ -664,12 +684,12 @@ def audit_data(dataframes, outfolder):
 	audit_trails_str += " Audit Trails ".center(OUTPUT_WITH, "=") + "\n"
 	audit_trails_str += "".center(OUTPUT_WITH, "=") + "\n"
 
-	audit_trails_str += "\n"
 
 	audit_parameters_check_df = parameters_df[parameters_df["NAME"].isin(["audit_sys_operations", "audit_trail"])]
 	audit_parameters_check_dict = audit_parameters_check_df.to_dict(orient="index")
 
-	audit_trails_str += f"Missconfigurated Audit Parameters: {len(audit_parameters_check_df[audit_parameters_check_df['VALUE'] != True])}" + "\n"
+	audit_trails_str += "\n"
+	audit_trails_str += f"[+] Missconfigurated Audit Parameters: {len(audit_parameters_check_df[audit_parameters_check_df['VALUE'] != True])}" + "\n"
 	
 	values_audit_functions = {
 		'audit_sys_operations': lambda value: "OK" if str(value).lower() == "true" else "Not OK. Should be True.",
@@ -679,8 +699,9 @@ def audit_data(dataframes, outfolder):
 	for dictionary in audit_parameters_check_dict.values():
 		name = dictionary["NAME"]
 		value = dictionary["VALUE"]
-		audit_trails_str += f"{name}\tvalue:{value}\t({values_audit_functions[name](value)})" + "\n"
+		audit_trails_str += f"{name.ljust(floor(OUTPUT_WITH/3))} value:{(' ' + value).ljust(floor(OUTPUT_WITH/3))} ({values_audit_functions[name](value)})" + "\n"
 
+	audit_trails_str += "\n"
 	print(audit_trails_str)
 
 	with open(outfolder+"/DB_AuditTrails.txt", "w") as f:
@@ -689,8 +710,6 @@ def audit_data(dataframes, outfolder):
 	# Current system privileges being audited across the system and by user;
 
 	# Check current system auditing options across the system and the user;
-
-
 
 if __name__ == "__main__":
 
