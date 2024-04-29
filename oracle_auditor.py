@@ -552,8 +552,8 @@ def audit_data(dataframes, outfolder):
 	remote_auth_str += "".center(OUTPUT_WITH, "=") + "\n"
 
 	remote_auth_parameters_check = {
-		"remote_os_roles": lambda value: "OK" if value == False else "Not OK. Should be FALSE.", 
-		"remote_os_authent": lambda value: "OK" if value == False else "Not OK. Should be FALSE.", 
+		"remote_os_roles": lambda value: "OK" if str(value).lower() == "false" else "Not OK. Should be FALSE.", 
+		"remote_os_authent": lambda value: "OK" if str(value).lower() == "false" else "Not OK. Should be FALSE.", 
 		"os_authent_prefix": lambda value: "Validate if there are users available.", 
 		"ldap_directory_access": lambda value: "OK" if str(value).lower() in ("none", "false") else "Not OK. Should be NONE.", 
 		"ldap_directory_sysauth": lambda value: "OK" if str(value).lower() in ("none", "false") else "Not OK. Should be NONE.", 
