@@ -477,7 +477,7 @@ def audit_data(dataframes, outfolder):
 	logon_audit_str += merged_df[merged_df['LastLogonWithin12Months'] == False].head(25).to_string(index=False) + "\n"
 	logon_audit_str += f"	List truncated to 25. Check the entire list at 'LoginAudit-LastLogonUsers.xlsx'." + "\n" if len(merged_df[merged_df['LastLogonWithin12Months'] == False]) > 25 else ""
 	
-	merged_df = pd.merge(merged_df, users_privs_df, on='USERNAME', how='left')
+	merged_df = pd.merge(merged_df, users_privs_df[["USERNAME", "has_critical_privs", "User_Privileges"]], on='USERNAME', how='left')
 	merged_df.to_excel(f"{outfolder}/LoginAudit-LastLogonUsers.xlsx")
 
 	logon_audit_str += "\n"
