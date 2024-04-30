@@ -333,6 +333,14 @@ def audit_data(dataframes, outfolder):
 		priv_esc_str += "\n"
 		priv_esc_str += f"More details can be fount at {outfolder}/DBPrivsAudit-Roles.xlsx." + "\n"
 		roles_privileges_df[roles_privileges_df[list(dangerous_privs.keys())].any(axis=1)].to_excel(f"{outfolder}/DBPrivsAudit-Roles.xlsx")
+
+		roles_dangerous_privs_dict = roles_privileges_df[(roles_privileges_df["SELECT_ANY_DICTIONARY"].eq(True) | users_dangerous_privs_df["CAN_ELEVATE_PRIVS"].eq(True))].to_dict("index")
+
+		for index in roles_dangerous_privs_dict:
+			priv_esc_str += f"{roles_dangerous_privs_dict[index]['GRANTED_ROLE']}" + "\n"
+			for key in dangerous_privs:
+				if roles_dangerous_privs_dict[index][key] == True:
+					priv_esc_str += f"	- {' + '.join(dangerous_privs[key])}" + "\n"
 		
 	priv_esc_str += "\n"
 	priv_esc_str += f"[+] Number of users with dangerous privileges: {dangerous_users}" + "\n"
@@ -356,11 +364,8 @@ def audit_data(dataframes, outfolder):
 		for index in users_dangerous_privs_dict:
 			priv_esc_str += f"{users_dangerous_privs_dict[index]['USERNAME']}" + "\n"
 			for key in dangerous_privs:
-				if key == "SELECT_ANY_DICTIONARY":
-					continue
-				if users_dangerous_privs_dict[index][key] == True:
+				if ((not key == "SELECT_ANY_DICTIONARY") and (users_dangerous_privs_dict[index][key] == True)):
 					priv_esc_str += f"	- {' + '.join(dangerous_privs[key])}" + "\n"
-		
 		
 		users_dangerous_privs_df[users_dangerous_privs_df[list(dangerous_privs.keys())].any(axis=1)].to_excel(f"{outfolder}/DBPrivsAudit-Users.xlsx")
 
