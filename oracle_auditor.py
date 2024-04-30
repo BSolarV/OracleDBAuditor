@@ -70,7 +70,7 @@ def generate_dataframes(folder_path, files_to_skip):
 	for file_name in files:
 		if file_name in files_to_skip:
 			continue
-		#print(f"Processing {file_name}")
+		print(f"Processing {file_name}")
 		file_path = os.path.join(folder_path, file_name)
 		df = process_file(file_path)
 		dataframes[file_name.split(".")[0]] = df
@@ -685,13 +685,15 @@ def audit_data(dataframes, outfolder):
 	audit_trails_str += "".center(OUTPUT_WITH, "=") + "\n"
 
 
-	audit_parameters_check_df = parameters_df[parameters_df["NAME"].isin(["audit_sys_operations", "audit_trail"])]
+	audit_parameters_check_df = parameters_df[parameters_df["NAME"].isin(["audit_sys_operations", "audit_trail", "audit_syslog_level", "audit_file_dest"])]
 	audit_parameters_check_dict = audit_parameters_check_df.to_dict(orient="index")
 
 	audit_trails_str += "\n"
 	audit_trails_str += f"[+] Missconfigurated Audit Parameters: {len(audit_parameters_check_df[audit_parameters_check_df['VALUE'] != True])}" + "\n"
 	
 	values_audit_functions = {
+		'audit_syslog_level': lambda value: 'Validate log level.',
+		'audit_file_dest': lambda value: 'Interesting file path.',
 		'audit_sys_operations': lambda value: "OK" if str(value).lower() == "true" else "Not OK. Should be True.",
 		'audit_trail': lambda value: "OK" if value.split(",")[0].strip() in ("DB", "OS") else "Not OK. Should be DB or OS"
 	}
