@@ -334,7 +334,7 @@ def audit_data(dataframes, outfolder):
 		priv_esc_str += f"More details can be fount at {outfolder}/DBPrivsAudit-Roles.xlsx." + "\n"
 		roles_privileges_df[roles_privileges_df[list(dangerous_privs.keys())].any(axis=1)].to_excel(f"{outfolder}/DBPrivsAudit-Roles.xlsx")
 
-		roles_dangerous_privs_dict = roles_privileges_df[(roles_privileges_df["SELECT_ANY_DICTIONARY"].eq(True) | users_dangerous_privs_df["CAN_ELEVATE_PRIVS"].eq(True))].to_dict("index")
+		roles_dangerous_privs_dict = roles_privileges_df[(roles_privileges_df["SELECT_ANY_DICTIONARY"].eq(True) | roles_privileges_df["CAN_ELEVATE_PRIVS"].eq(True))].to_dict("index")
 
 		for index in roles_dangerous_privs_dict:
 			priv_esc_str += f"{roles_dangerous_privs_dict[index]['GRANTED_ROLE']}" + "\n"
