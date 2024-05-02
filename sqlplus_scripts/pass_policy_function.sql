@@ -1,8 +1,15 @@
+set echo off
 set wrap off
-set serveroutput on size 30000;
-set linesize 5000 pagesize 1000
+set colsep '|'
+set feedback off
+set sqlprompt ''
+set trimspool on
+set headsep off
+set linesize 10000 pagesize 999999
 
 connect $USERNAME/$PASS@$HOST:$PORT/$SID
+
+spool $FILENAME
 
 var v_verify_function VARCHAR2(100);
 BEGIN

@@ -1,8 +1,20 @@
+set echo off
 set wrap off
-set linesize 500 linesize 1000 pagesize 1000
+set colsep '|'
+set feedback off
+set sqlprompt ''
+set trimspool on
+set headsep off
+set linesize 10000 pagesize 999999
+
+connect $USERNAME/$PASS@$HOST:$PORT/$SID
+
+spool $FILENAME
 
 connect $USERNAME/$PASS@$HOST:$PORT/$SID
 
 SELECT USERNAME, USER_ID, ACCOUNT_STATUS, LOCK_DATE, EXPIRY_DATE, PROFILE, password_versions, DEFAULT_TABLESPACE, TEMPORARY_TABLESPACE, CREATED, PROFILE, EXTERNAL_NAME FROM dba_users;
+
+spool off
 
 quit

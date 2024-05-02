@@ -1,8 +1,18 @@
+set echo off
 set wrap off
-set linesize 500 linesize 1000 pagesize 1000
+set colsep '|'
+set feedback off
+set sqlprompt ''
+set trimspool on
+set headsep off
+set linesize 10000 pagesize 999999
 
 connect $USERNAME/$PASS@$HOST:$PORT/$SID
 
+spool $FILENAME
+
 SELECT * FROM dba_profiles order by profile;
+
+spool off
 
 quit
