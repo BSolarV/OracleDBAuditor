@@ -5,4 +5,6 @@ connect $USERNAME/$PASS@$HOST:$PORT/$SID
 
 SELECT * FROM sys.dba_stmt_audit_opts; 
 
+spool off
+
 quit

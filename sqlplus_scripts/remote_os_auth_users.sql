@@ -5,4 +5,6 @@ connect $USERNAME/$PASS@$HOST:$PORT/$SID
 
 SELECT username, password FROM dba_users WHERE password='EXTERNAL';
 
+spool off
+
 quit

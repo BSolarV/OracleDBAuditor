@@ -5,4 +5,6 @@ connect $USERNAME/$PASS@$HOST:$PORT/$SID
 
 SELECT * FROM dba_role_privs;
 
+spool off
+
 quit

@@ -5,4 +5,6 @@ connect $USERNAME/$PASS@$HOST:$PORT/$SID
 
 SELECT resource_name,limit from dba_profiles where profile='DEFAULT';
 
+spool off
+
 quit

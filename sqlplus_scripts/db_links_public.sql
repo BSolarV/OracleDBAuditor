@@ -5,4 +5,6 @@ connect $USERNAME/$PASS@$HOST:$PORT/$SID
 
 SELECT * FROM ALL_DB_LINKS;
 
+spool off
+
 quit

@@ -5,4 +5,6 @@ connect $USERNAME/$PASS@$HOST:$PORT/$SID
 
 SELECT * FROM V$VERSION; 
 
+spool off
+
 quit

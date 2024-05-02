@@ -5,4 +5,6 @@ connect $USERNAME/$PASS@$HOST:$PORT/$SID
 
 show parameter audit;
 
+spool off
+
 quit

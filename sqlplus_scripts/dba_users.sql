@@ -5,4 +5,6 @@ connect $USERNAME/$PASS@$HOST:$PORT/$SID
 
 SELECT * FROM v$pwfile_users;
 
+spool off
+
 quit

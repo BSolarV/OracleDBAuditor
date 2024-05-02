@@ -5,4 +5,6 @@ connect $USERNAME/$PASS@$HOST:$PORT/$SID
 
 select COMP_ID, COMP_NAME, VERSION from dba_registry;
 
+spool off
+
 quit
