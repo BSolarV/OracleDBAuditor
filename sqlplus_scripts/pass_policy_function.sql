@@ -1,6 +1,6 @@
 set wrap off
 set serveroutput on size 30000;
-set linesize 500 pagesize 1000
+set linesize 5000 pagesize 1000
 
 connect $USERNAME/$PASS@$HOST:$PORT/$SID
 
