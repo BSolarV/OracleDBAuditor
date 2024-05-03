@@ -60,6 +60,7 @@ function main {
         cp ../sqlplus_scripts/$sql_file.sql ${sql_file}_tmp.sql
 
         # Replace variables in a temporary file
+        sed -i "s/\$FILENAME/${sql_file}.txt/g" ${sql_file}_tmp.sql
         sed -i "s/\$USERNAME/$USERNAME/g" ${sql_file}_tmp.sql
         sed -i "s/\$PASS/$PASS/g" ${sql_file}_tmp.sql
         sed -i "s/\$HOST/$HOST/g" ${sql_file}_tmp.sql
@@ -110,6 +111,7 @@ function main {
             cp ../sqlplus_scripts/$DB_VERSION/pass_dump/$sql_file.sql ${sql_file}_tmp.sql
 
             # Replace variables in a temporary file
+            sed -i "s/\$FILENAME/${sql_file}.txt/g" ${sql_file}_tmp.sql
             sed -i "s/\$USERNAME/$USERNAME/g" ${sql_file}_tmp.sql
             sed -i "s/\$PASS/$PASS/g" ${sql_file}_tmp.sql
             sed -i "s/\$HOST/$HOST/g" ${sql_file}_tmp.sql
