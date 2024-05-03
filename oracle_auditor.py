@@ -5,6 +5,7 @@ from math import floor
 import pandas as pd
 
 OUTPUT_WITH = 96
+SEPARATOR = '|verbar|'
 
 # ================================================
 # Utility
@@ -31,13 +32,16 @@ def extract_data(lines):
 	headers = None
 	totallines = len(lines)
 	line_index = 0
+
+	size = 0
+
 	while line_index < totallines:
 
-		line = tabstop(lines[line_index])
+		line = lines[line_index]
 		if "rows will be truncated" in line.lower():
 			line_index += 1
 		elif "selected." in line.lower():
-			pass
+			line_index += 1
 
 		elif not line.strip():  # check empty lines
 			if not headers:  # If headers not defined, assume this line is headers
@@ -45,13 +49,21 @@ def extract_data(lines):
 				#print(f"[+] {lines[line_index]}")
 				#print(f"[+] {lines[line_index+1]}")
 				#print(f"[+] {lines[line_index+2]}")
-				headers = [header.strip() for header in lines[line_index+1].strip().split()]
-				col_lenght = list(map(lambda line: len(line) ,lines[line_index+2].split()))
+				headers = [header.strip() for header in lines[line_index+1].strip().split(SEPARATOR)]
+				size = len(headers)
 
 			line_index += 2
 
 		else:
-			row_data = [ line[sum(col_lenght[:i]) + i : sum(col_lenght[:i]) + i + col_lenght[i] ].strip() for i in range(len(col_lenght))]
+			row_raw = line
+			while SEPARATOR not in line:
+				line_index += 1
+				if line_index >= totallines:
+					break
+				line = lines[line_index]
+				row_raw += line
+
+			row_data = list(map(lambda x: x.strip(), line.split(SEPARATOR)))
 			data.append(row_data)
 
 		line_index += 1
@@ -172,7 +184,7 @@ def find_roles_users(roles, granted_roles_df):
 # Audit
 # ================================================
 
-def audit_data(dataframes, outfolder):
+def audit_data(dataframes, outfolder, active_users_audit, verbosity):
 
 	# ===============================
 	# DataFrames
@@ -194,6 +206,7 @@ def audit_data(dataframes, outfolder):
 	db_links_df = dataframes["db_links_all"]
 	audit_trails_users_statements_df = dataframes["audit_trails_users_statements"]
 	audit_trails_users_objects_df = dataframes["audit_trails_users_objects"]
+	commands_history_df = dataframes["commands_history"]
 
 	if not os.path.exists(out_folder_path+"/raw_data"):
 		os.makedirs(out_folder_path+"/raw_data")
@@ -369,7 +382,7 @@ def audit_data(dataframes, outfolder):
 		
 		users_dangerous_privs_df[users_dangerous_privs_df[list(dangerous_privs.keys())].any(axis=1)].to_excel(f"{outfolder}/DBPrivsAudit-Users.xlsx")
 
-	privs_df.to_excel(f"{outfolder}/DBPrivsAudit-EveryUser.xlsx")
+	users_dangerous_privs_df.to_excel(f"{outfolder}/DBPrivsAudit-EveryUser.xlsx")
 
 	priv_esc_str += "\n"
 	print(priv_esc_str)
@@ -717,6 +730,50 @@ def audit_data(dataframes, outfolder):
 	# Current system privileges being audited across the system and by user;
 
 	# Check current system auditing options across the system and the user;
+ 
+	# ===============================
+	# Active users using important commands
+	# ===============================
+ 
+	if active_users_audit:
+ 
+		active_users_str = ""
+
+		active_users_str += "".center(OUTPUT_WITH, "=") + "\n"
+		active_users_str += " Active users Audit ".center(OUTPUT_WITH, "=") + "\n"
+		active_users_str += "".center(OUTPUT_WITH, "=") + "\n"
+
+		commands_history_grouped_df = commands_history_df[["USERNAME", "COMMAND_TYPE", "QUERY_TEXT"]].groupby("USERNAME").agg({
+			'QUERY_TEXT': lambda x: set(x),
+	    	'COMMAND_TYPE': lambda x: set(x)
+		}).reset_index()
+		commands_history_grouped_df.columns = ['USERNAME', 'QUERY_TEXTS', 'COMMAND_TYPES']
+		commands_history_grouped_df["ONLY_SELECT"] = commands_history_grouped_df["COMMAND_TYPES"].apply( lambda value: "3" in set(value) and len(set(value)) == 1 )
+		active_users_df = pd.merge(
+			users_dangerous_privs_df, 
+			commands_history_grouped_df.drop_duplicates('USERNAME'), 
+			how="left", 
+			on="USERNAME"
+			)
+		active_users_df.dropna(subset=['COMMAND_TYPES'], inplace=True)
+		active_users_df.drop(
+			active_users_df.columns.difference(['USERNAME', "is_system_user", "ACCOUNT_STATUS", "has_critical_privs", "COMMAND_TYPES", "ONLY_SELECT", "QUERY_TEXTS"]), 
+			axis=1, 
+			inplace=True)
+		
+		active_users_str += "\n"
+		active_users_str += f"[+] Numbe of users that has executed important commands: {len(active_users_df[ active_users_df['ONLY_SELECT'] == False ])}" + "\n"
+		active_users_str += active_users_df[ active_users_df["ONLY_SELECT"] == False ][['USERNAME', "is_system_user", "ACCOUNT_STATUS", "has_critical_privs", "COMMAND_TYPES", "ONLY_SELECT"]].head(25).to_string() + "\n"
+		active_users_str += "...\nTable truncated to 25. For full list check ActiveUsers.xlsx.\n" if len(active_users_df[ active_users_df["ONLY_SELECT"] == False ]) > 25 else ""
+		active_users_str += "\n"
+
+		active_users_df.to_excel(f"{outfolder}/ActiveUsers.xlsx")
+
+		print(active_users_str)
+
+		with open(outfolder+"/DB_ActveUsers.txt", "w") as f:
+			f.write(active_users_str)
+
 
 if __name__ == "__main__":
 
@@ -724,6 +781,7 @@ if __name__ == "__main__":
 	parser.add_argument("-dbv", "--database-version", type=str, help='Specify Oracle DB version (10g, 11g, 12c, 19c).', required=True)
 	parser.add_argument("-f", "--folder-path", type=str, help='Path to the folder containing .txt files', required=True)
 	parser.add_argument("-o", "--out-folder-path", type=str, help='Path to the folder containing .txt files')
+	parser.add_argument("--active-users-audit", action='store_true', help='Path to the folder containing .txt files')
 	parser.add_argument('-v', '--verbose', help="Verbosity Level. (-v to -vvv)", action='count', default=0)
 	args = parser.parse_args()
 
@@ -744,4 +802,4 @@ if __name__ == "__main__":
 
 	dataframes = generate_dataframes(args.folder_path, set(files_to_copy.keys()))
 
-	audit_data(dataframes, out_folder_path)
+	audit_data(dataframes, out_folder_path, args.active_users_audit, args.verbose)
