@@ -5,7 +5,7 @@ set feedback off
 set sqlprompt ''
 set trimspool on
 set headsep off
-set linesize 10000 pagesize 999999
+set linesize 10000 pagesize 50000
 
 connect $USERNAME/$PASS@$HOST:$PORT/$SID
 
