@@ -67,7 +67,7 @@ function main {
         sed -i "s/\$SID/$SID/g" ${sql_file}_tmp.sql
 
         # Execute SQL commands using SQL*Plus
-        cat ${sql_file}_tmp.sql | sqlplus -s /nolog > Report-$SID/${sql_file}.txt
+        cat ${sql_file}_tmp.sql | sqlplus -s /nolog > /dev/null
 
         # Clean up temporary files
         rm ${sql_file}_tmp.sql
@@ -92,7 +92,7 @@ function main {
         sed -i "s/\$SID/$SID/g" ${sql_file}_tmp.sql
 
         # Execute SQL commands using SQL*Plus
-        cat ${sql_file}_tmp.sql | sqlplus -s /nolog > Report-$SID/${sql_file}.txt
+        cat ${sql_file}_tmp.sql | sqlplus -s /nolog > /dev/null
 
         # Clean up temporary files
         rm ${sql_file}_tmp.sql
@@ -117,7 +117,7 @@ function main {
             sed -i "s/\$SID/$SID/g" ${sql_file}_tmp.sql
 
             # Execute SQL commands using SQL*Plus
-            cat ${sql_file}_tmp.sql | sqlplus -s /nolog > Report-$SID/${sql_file}.txt
+            cat ${sql_file}_tmp.sql | sqlplus -s /nolog > /dev/null
 
             # Clean up temporary files
             rm ${sql_file}_tmp.sql
