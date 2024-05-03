@@ -46,8 +46,10 @@ function main {
         mkdir -p Report-$SID
     fi
 
+    cd Report-$SID
+
     # Run scripts for every DB version
-    for sql_file_raw in ./sqlplus_scripts/*.sql; do
+    for sql_file_raw in ../sqlplus_scripts/*.sql; do
         
         sql_file_with_path=${sql_file_raw%.*}
         sql_file=${sql_file_with_path##*/}
@@ -55,7 +57,7 @@ function main {
         
 
         # Backup original commands.sql file
-        cp sqlplus_scripts/$sql_file.sql ${sql_file}_tmp.sql
+        cp ../sqlplus_scripts/$sql_file.sql ${sql_file}_tmp.sql
 
         # Replace variables in a temporary file
         sed -i "s/\$USERNAME/$USERNAME/g" ${sql_file}_tmp.sql
@@ -72,14 +74,14 @@ function main {
     done
 
     # Run scripts specific to a version
-    for sql_file_raw in ./sqlplus_scripts/$DB_VERSION/*.sql; do
+    for sql_file_raw in ../sqlplus_scripts/$DB_VERSION/*.sql; do
 
         sql_file_with_path=${sql_file_raw%.*}
         sql_file=${sql_file_with_path##*/}
         echo "Running $sql_file_raw..."
 
         # Backup original commands.sql file
-        cp sqlplus_scripts/$DB_VERSION/$sql_file.sql ${sql_file}_tmp.sql
+        cp ../sqlplus_scripts/$DB_VERSION/$sql_file.sql ${sql_file}_tmp.sql
 
         # Replace variables in a temporary file
         sed -i "s/\$FILENAME/${sql_file}.txt/g" ${sql_file}_tmp.sql
@@ -98,14 +100,14 @@ function main {
 
     # Check and run password hashes dump
     if [ $PASSWORD_HASHES ]; then
-        for sql_file_raw in ./sqlplus_scripts/$DB_VERSION/pass_dump/*.sql; do
+        for sql_file_raw in ../sqlplus_scripts/$DB_VERSION/pass_dump/*.sql; do
             
             sql_file_with_path=${sql_file_raw%.*}
 	    sql_file=${sql_file_with_path##*/}
             echo "Running $sql_file_raw..."
 
             # Backup original commands.sql file
-            cp sqlplus_scripts/$DB_VERSION/pass_dump/$sql_file.sql ${sql_file}_tmp.sql
+            cp ../sqlplus_scripts/$DB_VERSION/pass_dump/$sql_file.sql ${sql_file}_tmp.sql
 
             # Replace variables in a temporary file
             sed -i "s/\$USERNAME/$USERNAME/g" ${sql_file}_tmp.sql
