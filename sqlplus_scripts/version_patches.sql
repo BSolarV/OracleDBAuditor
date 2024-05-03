@@ -1,6 +1,6 @@
 set echo off
 set wrap off
-set colsep '|'
+set colsep '|verbar|'
 set feedback off
 set sqlprompt ''
 set trimspool on
