@@ -18,7 +18,7 @@ BEGIN
   AND resource_name = 'PASSWORD_VERIFY_FUNCTION';
 
   CASE :v_verify_function WHEN NULL THEN
-  EXECUTE IMMEDIATE 'SELECT dbms_metadata.get_ddl(''FUNCTION'',''' |verbar||verbar| :v_verify_function |verbar||verbar| ''') FROM dual;';
+  EXECUTE IMMEDIATE 'SELECT dbms_metadata.get_ddl(''FUNCTION'',''' || :v_verify_function || ''') FROM dual;';
   ELSE
   dbms_output.put_line('No password function found.');
   END CASE;
