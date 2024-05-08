@@ -56,7 +56,7 @@ def extract_data(lines):
 
 		else:
 			row_raw = line
-			while SEPARATOR not in line:
+			while size > 1 and SEPARATOR not in line:
 				line_index += 1
 				if line_index >= totallines:
 					break
@@ -184,7 +184,7 @@ def find_roles_users(roles, granted_roles_df):
 # Audit
 # ================================================
 
-def audit_data(dataframes, outfolder, active_users_audit, verbosity):
+def audit_data(dataframes, outfolder, active_users_audit, dbv, verbosity):
 
 	# ===============================
 	# DataFrames
@@ -252,11 +252,14 @@ def audit_data(dataframes, outfolder, active_users_audit, verbosity):
 	pass_policy_str += "\n"
 	pass_policy_str += "[+] Password Policy function" + "\n"
 	
-	pass_policy_funct_file = "".join(open(outfolder+"/pass_policy_function.txt", "r").readlines())
-	pass_policy_str += pass_policy_funct_file
+	pass_function_lines = open(outfolder+"/pass_policy_function.txt", "r").readlines()
+	if len(pass_function_lines) < 0:
+		pass_policy_str += "No function found." + "\n"
+	else:
+		pass_policy_funct_file = "".join(pass_function_lines)
+		pass_policy_str += pass_policy_funct_file
 
 	pass_policy_str += "\n"
-
 	print(pass_policy_str)
 
 	with open(outfolder+"/DB_passploicy.txt", "w") as f:
@@ -541,15 +544,15 @@ def audit_data(dataframes, outfolder, active_users_audit, verbosity):
 	db_links_str += "\n" 
 	db_links_str += f"[+] Number of PUBLIC DB Links: {len(public_db_links_df)}" + "\n"
 	if len(public_db_links_df) > 0:
-		db_links_str += public_db_links_df[["OWNER", "USERNAME", "HOST"]].to_string() + "\n"
+		db_links_str += public_db_links_df[["OWNER", "DB_LINK", "USERNAME", "HOST"]].to_string() + "\n"
 		public_db_links_df.to_excel(f"{outfolder}/PublicDBLinks.xlsx")
 
 	dangerous_db_links_df = db_links_df[db_links_df["USERNAME"].isin(system_users)]
 
 	db_links_str += "\n" 
 	db_links_str += f"[+] Number of DB Links to System Users: {len(dangerous_db_links_df)}" + "\n"
-	if len(public_db_links_df) > 0:
-		db_links_str += dangerous_db_links_df[["OWNER", "USERNAME", "HOST"]].to_string() + "\n"
+	if len(dangerous_db_links_df) > 0:
+		db_links_str += dangerous_db_links_df[["OWNER", "DB_LINK", "USERNAME", "HOST"]].to_string() + "\n"
 		db_links_df.to_excel(f"{outfolder}/DBLinks.xlsx")
 	
 	db_links_str += "\n" 
@@ -569,22 +572,42 @@ def audit_data(dataframes, outfolder, active_users_audit, verbosity):
 	remote_auth_str += " Remote Auth ".center(OUTPUT_WITH, "=") + "\n"
 	remote_auth_str += "".center(OUTPUT_WITH, "=") + "\n"
 
+	remote_auth_parameters_df = parameters_df[parameters_df["NAME"].isin(["remote_os_roles", "remote_os_authent", "os_authent_prefix", "ldap_directory_access", "ldap_directory_sysauth"])].copy()
+
 	remote_auth_parameters_check = {
-		"remote_os_roles": lambda value: "OK" if str(value).lower() == "false" else "Not OK. Should be FALSE.", 
-		"remote_os_authent": lambda value: "OK" if str(value).lower() == "false" else "Not OK. Should be FALSE.", 
-		"os_authent_prefix": lambda value: "Validate if there are users available.", 
-		"ldap_directory_access": lambda value: "OK" if str(value).lower() in ("none", "false", "no") else "Not OK. Should be NONE.", 
-		"ldap_directory_sysauth": lambda value: "OK" if str(value).lower() in ("none", "false", "no") else "Not OK. Should be NONE.", 
+		"remote_os_roles": {
+			"text": lambda value: "OK" if str(value).lower() == "false" else "Not OK. Should be FALSE.", 
+			"check": lambda value: True if str(value).lower() == "false" else False
+		},
+		"remote_os_authent": {
+			"text": lambda value: "OK" if str(value).lower() == "false" else "Not OK. Should be FALSE.", 
+			"check": lambda value: True if str(value).lower() == "false" else False
+		},
+		"os_authent_prefix": {
+			"text": lambda value: "Validate available users.", 
+			"check": lambda value: True
+		},
+		"ldap_directory_access": {
+			"text": lambda value: "OK" if str(value).lower() in ("none", "false", "no") else "Not OK. Should be NONE.", 
+			"check": lambda value: True if str(value).lower() in ("none", "false", "no") else False
+		},
+		"ldap_directory_sysauth": {
+			"text": lambda value: "OK" if str(value).lower() in ("none", "false", "no") else "Not OK. Should be NONE.", 
+			"check": lambda value: True if str(value).lower() in ("none", "false", "no") else False
+		},
 	}
-	remote_auth_parameters_df = parameters_df[parameters_df["NAME"].isin(["remote_os_roles", "remote_os_authent", "os_authent_prefix", "ldap_directory_access", "ldap_directory_sysauth"])]
+	remote_auth_parameters_df["check_passed"] = remote_auth_parameters_df.apply( lambda row: remote_auth_parameters_check[row['NAME']]['check'](row['VALUE']), axis=1 )
+	remote_auth_parameters_df["comment"] = remote_auth_parameters_df.apply( lambda row: remote_auth_parameters_check[row['NAME']]['text'](row['VALUE']), axis=1 )
+
 	remote_auth_parameters_dict = remote_auth_parameters_df.to_dict(orient="index")
 	
 	remote_auth_str += "\n" 
-	remote_auth_str += f"[+] Remote OS Auth parameters:" + "\n"
+	remote_auth_str += f"[+] Remote OS Auth parameters missconfigured parameters: { len( remote_auth_parameters_df[ remote_auth_parameters_df['check_passed'] != True ] ) }" + "\n"
 	for dictionary in remote_auth_parameters_dict.values():
 		name = dictionary["NAME"]
 		value = dictionary["VALUE"]
-		remote_auth_str += f"{name.ljust(floor(OUTPUT_WITH/3))} value:{(' ' + value).ljust(floor(OUTPUT_WITH/3))} ({remote_auth_parameters_check[name](value)})" + "\n"
+		comment = dictionary["comment"]
+		remote_auth_str += f"{name.ljust(floor(OUTPUT_WITH/3))} value:{(' ' + value).ljust(floor(OUTPUT_WITH/3))} ({comment})" + "\n"
 		
 	remote_auth_str += "\n"
 	remote_auth_str += f"[+] Remote OS Auth available users: {len(remote_os_auth_users_df)}" + "\n"
@@ -668,22 +691,28 @@ def audit_data(dataframes, outfolder, active_users_audit, verbosity):
 	parameters_str += " Parameters Audit ".center(OUTPUT_WITH, "=") + "\n"
 	parameters_str += "".center(OUTPUT_WITH, "=") + "\n"
 
-	parameters_check_df = parameters_df[parameters_df["NAME"].isin(["O7_DICTIONARY_ACCESSIBILITY", "remote_os_authent", "remote_os_roles"])]
-	parameters_check_dict = parameters_check_df.to_dict(orient="index")
-	
-	parameters_str += "\n"
-	parameters_str += f"[+] Missconfigurated Parameters: {len(parameters_check_df[parameters_check_df['VALUE'] != True])}" + "\n"
+	parameters_check_df = parameters_df[parameters_df["NAME"].isin(["O7_DICTIONARY_ACCESSIBILITY"])].copy()
 	
 	values_parameters_functions = {
-		'O7_DICTIONARY_ACCESSIBILITY': lambda value: "OK" if str(value).lower() == "false" else "Not OK. Should be False.",
-		'remote_os_authent': lambda value: "OK" if str(value).lower() == "false" else "Not OK. Should be False.",
-		'remote_os_roles': lambda value: "OK" if str(value).lower() == "false" else "Not OK. Should be False.",
+		'O7_DICTIONARY_ACCESSIBILITY': {
+			"text": lambda value: "OK" if str(value).lower() == "false" else "Not OK. Should be False.", 
+			"check": lambda value: True if str(value).lower() == "false" else False
+		},
 	}
+	parameters_check_df["check_passed"] = parameters_check_df.apply(lambda row: values_parameters_functions[row['NAME']]['check'](row['VALUE']), axis=1)
+	parameters_check_df["comment"] = parameters_check_df.apply(lambda row: values_parameters_functions[row['NAME']]['text'](row['VALUE']), axis=1)
+
+	parameters_check_dict = parameters_check_df.to_dict(orient="index")
+
+	parameters_str += "\n"
+	parameters_str += f"[+] Missconfigurated Parameters: { len( parameters_check_df[ parameters_check_df['check_passed'] != True ] ) }" + "\n"
 	
-	for dictionary in parameters_check_dict.values():
-		name = dictionary["NAME"]
-		value = dictionary["VALUE"]
-		parameters_str += f"{name.ljust(floor(OUTPUT_WITH/3))} value:{(' ' + value).ljust(floor(OUTPUT_WITH/3))} ({values_parameters_functions[name](value)})" + "\n"
+	if len( parameters_check_df[ parameters_check_df["check_passed"] != True ] ) > 0:
+		for dictionary in parameters_check_dict.values():
+			name = dictionary["NAME"]
+			value = dictionary["VALUE"]
+			comment = dictionary["comment"] 
+			parameters_str += f"{name.ljust(floor(OUTPUT_WITH/3))} value:{(' ' + value).ljust(floor(OUTPUT_WITH/3))} ({comment})" + "\n"
 	
 	parameters_check_df.to_excel(f"{outfolder}/Parameters.xlsx")
 
@@ -703,23 +732,39 @@ def audit_data(dataframes, outfolder, active_users_audit, verbosity):
 	audit_trails_str += "".center(OUTPUT_WITH, "=") + "\n"
 
 
-	audit_parameters_check_df = parameters_df[parameters_df["NAME"].isin(["audit_sys_operations", "audit_trail", "audit_syslog_level", "audit_file_dest"])]
+	audit_parameters_check_df = parameters_df[parameters_df["NAME"].isin(["audit_sys_operations", "audit_trail", "audit_syslog_level", "audit_file_dest"])].copy()
+	
+	values_audit_functions = {
+		'audit_syslog_level': {
+			"text": lambda value: 'Validate log level.',
+			"check": lambda value: True
+		},
+		'audit_file_dest': {
+			"text": lambda value: 'Interesting path.',
+			"check": lambda value: True
+		},
+		'audit_sys_operations': {
+			"text": lambda value: "OK" if str(value).lower() == "true" else "Not OK. Should be True.",
+			"check": lambda value: True if str(value).lower() == "true" else False
+		},
+		'audit_trail': {
+			"text": lambda value: "OK" if value.split(",")[0].strip() in ("DB", "OS") else "Not OK. Should be DB or OS",
+			"check": lambda value: True if value.split(",")[0].strip() in ("DB", "OS") else False
+		},
+	}
+	audit_parameters_check_df["check_passed"] = audit_parameters_check_df.apply( lambda row: values_audit_functions[row['NAME']]['check'](row['VALUE']), axis=1 )
+	audit_parameters_check_df["comment"] = audit_parameters_check_df.apply( lambda row: values_audit_functions[row['NAME']]['text'](row['VALUE']), axis=1 )
+						   
 	audit_parameters_check_dict = audit_parameters_check_df.to_dict(orient="index")
 
 	audit_trails_str += "\n"
-	audit_trails_str += f"[+] Missconfigurated Audit Parameters: {len(audit_parameters_check_df[audit_parameters_check_df['VALUE'] != True])}" + "\n"
-	
-	values_audit_functions = {
-		'audit_syslog_level': lambda value: 'Validate log level.',
-		'audit_file_dest': lambda value: 'Interesting file path.',
-		'audit_sys_operations': lambda value: "OK" if str(value).lower() == "true" else "Not OK. Should be True.",
-		'audit_trail': lambda value: "OK" if value.split(",")[0].strip() in ("DB", "OS") else "Not OK. Should be DB or OS"
-	}
+	audit_trails_str += f"[+] Missconfigurated Audit Parameters: { len( audit_parameters_check_df[ audit_parameters_check_df['check_passed'] != True ] ) }" + "\n"
 
 	for dictionary in audit_parameters_check_dict.values():
 		name = dictionary["NAME"]
 		value = dictionary["VALUE"]
-		audit_trails_str += f"{name.ljust(floor(OUTPUT_WITH/3))} value:{(' ' + value).ljust(floor(OUTPUT_WITH/3))} ({values_audit_functions[name](value)})" + "\n"
+		comment = dictionary["comment"]
+		audit_trails_str += f"{name.ljust(floor(OUTPUT_WITH/3))} value:{(' ' + value).ljust(floor(OUTPUT_WITH/3))} ({comment})" + "\n"
 
 	audit_trails_str += "\n"
 	print(audit_trails_str)
@@ -730,6 +775,32 @@ def audit_data(dataframes, outfolder, active_users_audit, verbosity):
 	# Current system privileges being audited across the system and by user;
 
 	# Check current system auditing options across the system and the user;
+
+
+
+	# ===============================
+	# Default password users (Only dbv >= 11g)
+	# ===============================
+ 
+	if dbv in ('11g', '12c', '19c'):
+ 
+		default_pass_users_str = ""
+
+		default_pass_users_str += "".center(OUTPUT_WITH, "=") + "\n"
+		default_pass_users_str += " Users with default password ".center(OUTPUT_WITH, "=") + "\n"
+		default_pass_users_str += "".center(OUTPUT_WITH, "=") + "\n"
+
+		default_pass_users_df = dataframes["default_pass_users"]
+
+		default_pass_users_str += f"[+] Users with default password: {len(default_pass_users_df)}" + "\n"
+		if len(default_pass_users_df) > 0:
+			default_pass_users_str += default_pass_users_df.to_string() + "\n"
+
+	default_pass_users_str += "\n" 
+	print(default_pass_users_str)
+
+	with open(outfolder+"/DB_DefaultPassUsers.txt", "w") as f:
+		f.write(default_pass_users_str)
  
 	# ===============================
 	# Active users using important commands
@@ -777,7 +848,7 @@ def audit_data(dataframes, outfolder, active_users_audit, verbosity):
 
 if __name__ == "__main__":
 
-	parser = argparse.ArgumentParser(description='Process some files.')
+	parser = argparse.ArgumentParser(description='Audit Oracle Database Server information gathered.')
 	parser.add_argument("-dbv", "--database-version", type=str, help='Specify Oracle DB version (10g, 11g, 12c, 19c).', required=True)
 	parser.add_argument("-f", "--folder-path", type=str, help='Path to the folder containing .txt files', required=True)
 	parser.add_argument("-o", "--out-folder-path", type=str, help='Path to the folder containing .txt files')
@@ -802,4 +873,4 @@ if __name__ == "__main__":
 
 	dataframes = generate_dataframes(args.folder_path, set(files_to_copy.keys()))
 
-	audit_data(dataframes, out_folder_path, args.active_users_audit, args.verbose)
+	audit_data(dataframes, out_folder_path, args.active_users_audit, args.database_version, args.verbose)

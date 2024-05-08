@@ -125,6 +125,8 @@ function main {
             rm ${sql_file}_tmp.sql
         done
     fi
+
+    python oracle_auditor.py -f Report-$SID -dbv $DB_VERSION --active-users-audit
 }
 
 # Parse command-line arguments
