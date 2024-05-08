@@ -99,9 +99,13 @@ This tool is based on the [Oracle](https://github.com/Jean-Francois-C/Database-S
 ### Prerequisites
 
 1. Python > 3.7
+	```
+	$ python --version
+	Python 3.7.0
+	```
 
 2. SQL\*Plus  
-SQL\*Plus must be installed in the system and in the PATH.
+	SQL\*Plus must be installed in the system and in the PATH.
 
 3. User with privileges on Oracle Database Server.  
 Minimum privileges required:
