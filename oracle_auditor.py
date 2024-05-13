@@ -796,11 +796,11 @@ def audit_data(dataframes, outfolder, active_users_audit, dbv, verbosity):
 		if len(default_pass_users_df) > 0:
 			default_pass_users_str += default_pass_users_df.to_string() + "\n"
 
-	default_pass_users_str += "\n" 
-	print(default_pass_users_str)
+		default_pass_users_str += "\n" 
+		print(default_pass_users_str)
 
-	with open(outfolder+"/DB_DefaultPassUsers.txt", "w") as f:
-		f.write(default_pass_users_str)
+		with open(outfolder+"/DB_DefaultPassUsers.txt", "w") as f:
+			f.write(default_pass_users_str)
  
 	# ===============================
 	# Active users using important commands
