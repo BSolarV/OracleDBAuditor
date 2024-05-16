@@ -126,6 +126,7 @@ function main {
         done
     fi
 
+    cd ..
     python oracle_auditor.py -f Report-$SID -dbv $DB_VERSION --active-users-audit
 }
 

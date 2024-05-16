@@ -439,13 +439,13 @@ def audit_data(dataframes, outfolder, active_users_audit, dbv, verbosity):
 		
 	# Check for tab privs on users 
 	full_tab_pirvs_df = pd.merge(tab_pirvs_df, users_df[["USERNAME", "ACCOUNT_STATUS", "is_system_user"]], how='left', left_on = 'GRANTEE', right_on = 'USERNAME').drop(columns='USERNAME')
-	users_tab_privs = full_tab_pirvs_df[full_tab_pirvs_df["GRANTEE"] != "PUBLIC"]
+	users_tab_privs = full_tab_pirvs_df[(full_tab_pirvs_df["GRANTEE"] != "PUBLIC") & (full_tab_pirvs_df["is_system_user"] == False)]
 
 	# Print users with tab privs
 	tab_pirvs_str += "\n"
-	tab_pirvs_str += f"[+] Number of dangerous Tab Privs granted: {len(users_tab_privs)}" + "\n"
+	tab_pirvs_str += f"[+] Number of dangerous Tab Privs granted to custom users: {len(users_tab_privs)}" + "\n"
 	if len(users_tab_privs) > 0:
-		users_dangerous_tab_privs_dict = users_tab_privs[users_tab_privs["is_system_user"] == False].to_dict(orient="index")
+		users_dangerous_tab_privs_dict = users_tab_privs.to_dict(orient="index")
 		users_dangerous_tab_privs_dict_parsed = {}
 		for index in users_dangerous_tab_privs_dict:
 			if users_dangerous_tab_privs_dict[index]["GRANTEE"] not in users_dangerous_tab_privs_dict_parsed:
