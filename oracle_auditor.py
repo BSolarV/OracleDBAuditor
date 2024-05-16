@@ -231,6 +231,7 @@ def audit_data(dataframes, outfolder, active_users_audit, dbv, verbosity):
 	db_version_str += "[+] Patches installed" + "\n"
 	db_version_str += patches_df.to_string(index=False) + "\n"
 
+	db_version_str += "\n"
 	print(db_version_str)
 
 	with open(outfolder+"/DB_Version.txt", "w") as f:
