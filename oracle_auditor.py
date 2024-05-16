@@ -636,7 +636,7 @@ def audit_data(dataframes, outfolder, active_users_audit, dbv, verbosity):
 		installed_components_str += dba_registry_df.to_string() + "\n"
 		dba_registry_df.to_excel(f"{outfolder}/InstalledComponents.xlsx")
 	
-	remote_auth_str += "\n" 
+	installed_components_str += "\n" 
 	print(installed_components_str)
 
 	with open(outfolder+"/DB_InstalledComponents.txt", "w") as f:
@@ -716,6 +716,7 @@ def audit_data(dataframes, outfolder, active_users_audit, dbv, verbosity):
 	
 	parameters_check_df.to_excel(f"{outfolder}/Parameters.xlsx")
 
+	parameters_str += "\n"
 	print(parameters_str)
 
 	with open(outfolder+"/DB_Parameters.txt", "w") as f:
@@ -775,7 +776,6 @@ def audit_data(dataframes, outfolder, active_users_audit, dbv, verbosity):
 	# Current system privileges being audited across the system and by user;
 
 	# Check current system auditing options across the system and the user;
-
 
 
 	# ===============================
