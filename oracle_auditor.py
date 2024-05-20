@@ -404,12 +404,16 @@ def audit_data(dataframes, outfolder, active_users_audit, dbv, verbosity):
 	dba_users_str += " DBA Users ".center(OUTPUT_WITH, "=") + "\n"
 	dba_users_str += "".center(OUTPUT_WITH, "=") + "\n"
 
-	merged_dba_users_df = pd.merge(dba_users_df, users_df, on='USERNAME', how='left')
-	
-	dba_users_str += "\n"
-	dba_users_str += merged_dba_users_df[["USERNAME", "ACCOUNT_STATUS", "is_system_user"]].to_string() + "\n"
-	
-	dba_users_str += "\n"
+	dba_users_str += f"[+] DBA Users found: {dangerous_users}" + "\n"
+
+	if len(dba_users_df) > 0:
+
+		merged_dba_users_df = pd.merge(dba_users_df, users_df, on='USERNAME', how='left')
+		
+		dba_users_str += "\n"
+		dba_users_str += merged_dba_users_df[["USERNAME", "ACCOUNT_STATUS", "is_system_user"]].to_string() + "\n"
+		
+		dba_users_str += "\n"
 	
 	print(dba_users_str)
 	
