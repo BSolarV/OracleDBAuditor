@@ -404,7 +404,7 @@ def audit_data(dataframes, outfolder, active_users_audit, dbv, verbosity):
 	dba_users_str += " DBA Users ".center(OUTPUT_WITH, "=") + "\n"
 	dba_users_str += "".center(OUTPUT_WITH, "=") + "\n"
 
-	dba_users_str += f"[+] DBA Users found: {dangerous_users}" + "\n"
+	dba_users_str += f"[+] DBA Users found: {len(dba_users_df)}" + "\n"
 
 	if len(dba_users_df) > 0:
 
@@ -473,8 +473,8 @@ def audit_data(dataframes, outfolder, active_users_audit, dbv, verbosity):
 	# ===============================
 
 	# Convert 'CREATED' and 'LOGON_TIM' columns to datetime
-	users_df['CREATED'] = pd.to_datetime(users_df['CREATED'], format='%d-%b-%y', utc=True)
-	lastlogon_df['LOGON_TIM'] = pd.to_datetime(lastlogon_df['LOGON_TIM'], format='%d-%b-%y', utc=True)
+	users_df['CREATED'] = pd.to_datetime(users_df['CREATED'], utc=True)
+	lastlogon_df['LOGON_TIM'] = pd.to_datetime(lastlogon_df['LOGON_TIM'], utc=True)
 
 	# Merge the dataframes on 'USERNAME'
 	merged_df = pd.merge(users_df, lastlogon_df, on='USERNAME', how='left')
