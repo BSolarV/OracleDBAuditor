@@ -473,8 +473,15 @@ def audit_data(dataframes, outfolder, active_users_audit, dbv, verbosity):
 	# ===============================
 
 	# Convert 'CREATED' and 'LOGON_TIM' columns to datetime
-	users_df['CREATED'] = pd.to_datetime(users_df['CREATED'], utc=True)
-	lastlogon_df['LOGON_TIM'] = pd.to_datetime(lastlogon_df['LOGON_TIM'], utc=True)
+	format_to_use = '%d-%b-%y'
+	try:
+		users_df['CREATED'] = pd.to_datetime(users_df['CREATED'], format=format_to_use, utc=True)
+	except:
+		print("[-] Could not infer the format of the date.")
+		print(f"Date found: {users_df.iloc[[0]]['CREATED']}")
+		format_to_use = input("Pleas enter the format for the dates (ex: '%m/%d/%Y' for '12/31/1999' or '%d-%b-%y' for '31-DEC-1999'):")
+		users_df['CREATED'] = pd.to_datetime(users_df['CREATED'], format=format_to_use, utc=True)
+	lastlogon_df['LOGON_TIM'] = pd.to_datetime(lastlogon_df['LOGON_TIM'], format=format_to_use, utc=True)
 
 	# Merge the dataframes on 'USERNAME'
 	merged_df = pd.merge(users_df, lastlogon_df, on='USERNAME', how='left')
