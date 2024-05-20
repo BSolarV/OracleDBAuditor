@@ -472,11 +472,10 @@ def audit_data(dataframes, outfolder, active_users_audit, dbv, verbosity):
 	# Audit Logons
 	# ===============================
 
-	# Convert 'CREATED' and 'LOGON_TIM' columns to datetime
-	format_to_use = '%d-%b-%y'
 	try:
-		users_df['CREATED'] = pd.to_datetime(users_df['CREATED'], format=format_to_use, utc=True)
+		users_df['CREATED'] = pd.to_datetime(users_df['CREATED'], infer_datetime_format=True, utc=True)
 	except:
+		format_to_use = '%d-%b-%y'
 		print("[-] Could not infer the format of the date.")
 		print(f"Date found: {users_df.iloc[[0]]['CREATED']}")
 		format_to_use = input("Pleas enter the format for the dates (ex: '%m/%d/%Y' for '12/31/1999' or '%d-%b-%y' for '31-DEC-1999'):")
