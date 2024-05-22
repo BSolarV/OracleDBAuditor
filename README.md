@@ -113,7 +113,7 @@ Minimum privileges required:
 	SELECT_CATALOG_ROLE
 	SELECT ANY DICTIONARY
 	```
-
+    ***Note: For Oracle DB Server 12c or later, DBA role is required for password dumping.***
 ### Installation
 
 1. Clone the repo
