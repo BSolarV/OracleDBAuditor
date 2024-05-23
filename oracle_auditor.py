@@ -395,7 +395,7 @@ def audit_data(dataframes, outfolder, active_users_audit, dbv, verbosity):
 
 		if count_elevation_roles > 0:
 
-			priv_esc_str += f"[-] Roles that can elevate privileges: {count_hashdump_roles}" + "\n"
+			priv_esc_str += f"[-] Roles that can elevate privileges: {count_elevation_roles}" + "\n"
 
 			for index in elevation_roles_dict:
 				priv_esc_str += f"{elevation_roles_dict[index]['GRANTED_ROLE']}" + "\n"
