@@ -428,7 +428,7 @@ def audit_data(dataframes, outfolder, active_users_audit, dbv, verbosity):
 
 			priv_esc_str += f"[-] Users that can elevate privileges: {count_elevation_users}" + "\n"
 			
-			elevation_users_dict = users_dangerous_privs_df[users_dangerous_privs_df["SELECT_ANY_DICTIONARY"].eq(True)].to_dict("index")
+			elevation_users_dict = users_dangerous_privs_df[users_dangerous_privs_df["CAN_ELEVATE_PRIVS"].eq(True)].to_dict("index")
 
 			for index in elevation_users_dict:
 				priv_esc_str += f"{elevation_users_dict[index]['USERNAME']}" + "\n"
@@ -443,7 +443,7 @@ def audit_data(dataframes, outfolder, active_users_audit, dbv, verbosity):
 	users_dangerous_privs_df.to_excel(f"{outfolder}/DBPrivsAudit-EveryUser.xlsx")
 
 	priv_esc_str += "\n"
-	
+
 	print(priv_esc_str)
 
 	with open(outfolder+"/DB_PrivsAudit.txt", "w") as f:
