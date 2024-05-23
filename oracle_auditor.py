@@ -248,9 +248,10 @@ def audit_data(dataframes, outfolder, active_users_audit, dbv, verbosity):
 	pass_policy_str += "".center(OUTPUT_WITH, "=") + "\n"
 
 	pass_policy_str += "\n"
+
 	pass_policy_str += pass_policy_df.to_string(index=False) + "\n"
-	
 	pass_policy_str += "\n"
+
 	pass_policy_str += "[+] Password Policy function" + "\n"
 	
 	pass_function_lines = open(outfolder+"/pass_policy_function.txt", "r").readlines()
@@ -261,6 +262,7 @@ def audit_data(dataframes, outfolder, active_users_audit, dbv, verbosity):
 		pass_policy_str += pass_policy_funct_file
 
 	pass_policy_str += "\n"
+
 	print(pass_policy_str)
 
 	with open(outfolder+"/DB_passploicy.txt", "w") as f:
@@ -276,8 +278,13 @@ def audit_data(dataframes, outfolder, active_users_audit, dbv, verbosity):
 	# Audit Privileges Scalation to DBA by Privs Combo
 	# ===============================
 
-	dangerous_privs = {
+	users_might_hashdump = True if dbv in ("10g", "11g") else False
+
+	hashdump_privs = {
 		"SELECT_ANY_DICTIONARY": ("SELECT ANY DICTIONARY",),
+	}
+
+	elevation_privs = {
 		"GRANT_ANY_ROLE": ("GRANT ANY ROLE",),
 		"ALTER_ANY_ROLE": ("ALTER ANY ROLE",),
 		"GRANT_ANY_PRIVILEGE": ("GRANT ANY PRIVILEGE",),
@@ -302,11 +309,15 @@ def audit_data(dataframes, outfolder, active_users_audit, dbv, verbosity):
 
 	roles_privileges_df.drop(roles_privileges_df.columns.difference(['GRANTED_ROLE', 'Role_Privileges']), axis=1, inplace=True)
 
-	# Add columns to roles_df for each tuple in dangerous_privs
-	for col_name, priv_tuple in dangerous_privs.items():
+	if users_might_hashdump:
+		# hashes can be dumped in 10g and 11g if user has SELECT ANY DICTIONARY
+		for col_name, priv_tuple in hashdump_privs.items():
+			roles_privileges_df[col_name] = roles_privileges_df['Role_Privileges'].apply(lambda priv_set: check_privileges(priv_set, priv_tuple))
+
+	for col_name, priv_tuple in elevation_privs.items():
 		roles_privileges_df[col_name] = roles_privileges_df['Role_Privileges'].apply(lambda priv_set: check_privileges(priv_set, priv_tuple))
 
-	roles_privileges_df["CAN_ELEVATE_PRIVS"] = roles_privileges_df[list(dangerous_privs.keys())[1:]].any(axis=1)
+	roles_privileges_df["CAN_ELEVATE_PRIVS"] = roles_privileges_df[list(elevation_privs.keys())].any(axis=1)
 	
 	# User Privs
 
@@ -323,10 +334,14 @@ def audit_data(dataframes, outfolder, active_users_audit, dbv, verbosity):
 	critical_privs = set(('ALTER','WRITE','INSERT','DELETE','UPDATE','BECOME USER','ALTER ANY MATERIALIZED VIEW','ALTER ANY ROLE','ALTER ANY TABLE','ALTER DATABASE','ALTER SESSION','ALTER SYSTEM','ALTER USER','CREATE ANY JOB','CREATE ANY MATERIALIZED VIEW','CREATE ANY PROCEDURE','CREATE ANY TABLE','CREATE ANY VIEW','CREATE MATERIALIZED VIEW','CREATE PROCEDURE','CREATE ROLE','CREATE TABLE','CREATE USER','CREATE VIEW','DELETE ANY TABLE','DROP ANY MATERIALIZED VIEW','DROP ANY ROLE','DROP ANY TABLE','DROP ANY VIEW','DROP PUBLIC DATABASE LINK','DROP USER','EXPORT FULL DATABASE','GRANT ANY OBJECT PRIVILEGE','GRANT ANY PRIVILEGE','GRANT ANY ROLE','INSERT ANY TABLE','MERGE ANY VIEW','UPDATE ANY TABLE'))
 	users_dangerous_privs_df["has_critical_privs"] = users_dangerous_privs_df["User_Privileges"].apply(lambda privs_set: True if sum([ 1 for priv in privs_set if priv in critical_privs ]) > 0 else False)
 
-	for col_name, priv_tuple in dangerous_privs.items():
+	if users_might_hashdump:
+		for col_name, priv_tuple in hashdump_privs.items():
+			users_dangerous_privs_df[col_name] = users_dangerous_privs_df['User_Privileges'].apply(lambda priv_set: check_privileges(priv_set, priv_tuple))
+
+	for col_name, priv_tuple in elevation_privs.items():
 		users_dangerous_privs_df[col_name] = users_dangerous_privs_df['User_Privileges'].apply(lambda priv_set: check_privileges(priv_set, priv_tuple))
 	
-	users_dangerous_privs_df["CAN_ELEVATE_PRIVS"] = users_dangerous_privs_df[list(dangerous_privs.keys())[1:]].any(axis=1)
+	users_dangerous_privs_df["CAN_ELEVATE_PRIVS"] = users_dangerous_privs_df[list(elevation_privs.keys())].any(axis=1)
 
 	roles_privileges_df = roles_privileges_df.drop_duplicates(subset=["GRANTED_ROLE"])
 	users_dangerous_privs_df = users_dangerous_privs_df.drop_duplicates(subset=["USERNAME"])
@@ -337,58 +352,98 @@ def audit_data(dataframes, outfolder, active_users_audit, dbv, verbosity):
 	priv_esc_str += "".center(OUTPUT_WITH, "=") + "\n"
 	priv_esc_str += " Priviglege Escalation Audit ".center(OUTPUT_WITH, "=") + "\n"
 	priv_esc_str += "".center(OUTPUT_WITH, "=") + "\n"
-	
 
-	dangerous_roles = roles_privileges_df[list(dangerous_privs.keys())].any(axis=1).sum()
-	dangerous_users = users_dangerous_privs_df[list(dangerous_privs.keys())].any(axis=1).sum()
-	
 	priv_esc_str += "\n"
-	priv_esc_str += f"[+] Number of roles with dangerous privileges: {dangerous_roles}" + "\n"
 	
-	if dangerous_roles > 0:
-		priv_esc_str += roles_privileges_df[roles_privileges_df[list(dangerous_privs.keys())].any(axis=1)][["GRANTED_ROLE", "SELECT_ANY_DICTIONARY", "CAN_ELEVATE_PRIVS"]].to_string() + "\n"
+	count_hashdump_roles = 0
+	count_hashdump_users = 0
+	if users_might_hashdump:
+		count_hashdump_roles = roles_privileges_df[list(hashdump_privs.keys())].any(axis=1).sum()
+		count_hashdump_users = users_dangerous_privs_df[list(hashdump_privs.keys())].any(axis=1).sum()
+
+	count_elevation_roles = roles_privileges_df[list(elevation_privs.keys())].any(axis=1).sum()
+	count_elevation_users = users_dangerous_privs_df[list(elevation_privs.keys())].any(axis=1).sum()
+	
+	relevant_columns = list(hashdump_privs.keys()) + list(elevation_privs.keys()) if users_might_hashdump else list(elevation_privs.keys())
+
+	priv_esc_str += f"[+] Number of roles with dangerous privileges: {count_elevation_roles + count_hashdump_roles}" + "\n"
+	priv_esc_str += "\n"
+	
+	if (count_elevation_roles + count_hashdump_roles) > 0:
+
+		columns_to_display = ["GRANTED_ROLE", "SELECT_ANY_DICTIONARY", "CAN_ELEVATE_PRIVS"] if dbv in ("10g", "11g") else ["GRANTED_ROLE", "CAN_ELEVATE_PRIVS"]
+		priv_esc_str += roles_privileges_df[roles_privileges_df[relevant_columns].any(axis=1)][columns_to_display].to_string() + "\n"
 		priv_esc_str += "\n"
 		priv_esc_str += f"More details can be fount at {outfolder}/DBPrivsAudit-Roles.xlsx." + "\n"
-		roles_privileges_df[roles_privileges_df[list(dangerous_privs.keys())].any(axis=1)].to_excel(f"{outfolder}/DBPrivsAudit-Roles.xlsx")
+		roles_privileges_df[roles_privileges_df[relevant_columns].any(axis=1)].to_excel(f"{outfolder}/DBPrivsAudit-Roles.xlsx")
+		priv_esc_str += "\n"
 
-		roles_dangerous_privs_dict = roles_privileges_df[(roles_privileges_df["SELECT_ANY_DICTIONARY"].eq(True) | roles_privileges_df["CAN_ELEVATE_PRIVS"].eq(True))].to_dict("index")
+		if users_might_hashdump and count_hashdump_roles > 0:
 
-		for index in roles_dangerous_privs_dict:
-			priv_esc_str += f"{roles_dangerous_privs_dict[index]['GRANTED_ROLE']}" + "\n"
-			for key in dangerous_privs:
-				if roles_dangerous_privs_dict[index][key] == True:
-					priv_esc_str += f"	- {' + '.join(dangerous_privs[key])}" + "\n"
+			priv_esc_str += f"[-] Roles that can dump password hashes: {count_hashdump_roles}" + "\n"
+
+			hashdump_roles_dict = roles_privileges_df[roles_privileges_df["SELECT_ANY_DICTIONARY"].eq(True)].to_dict("index")
+			for index in hashdump_roles_dict:
+				priv_esc_str += f"{hashdump_roles_dict[index]['GRANTED_ROLE']}" + "\n"
+				for key in hashdump_privs:
+					if hashdump_roles_dict[index][key] == True:
+						priv_esc_str += f"	- {' + '.join(hashdump_privs[key])}" + "\n"
+			
+			priv_esc_str += "\n"
+
+		elevation_roles_dict = roles_privileges_df[roles_privileges_df["CAN_ELEVATE_PRIVS"].eq(True)].to_dict("index")
+
+		if count_elevation_roles > 0:
+
+			priv_esc_str += f"[-] Roles that can elevate privileges: {count_hashdump_roles}" + "\n"
+
+			for index in elevation_roles_dict:
+				priv_esc_str += f"{elevation_roles_dict[index]['GRANTED_ROLE']}" + "\n"
+				for key in elevation_privs:
+					if elevation_roles_dict[index][key] == True:
+						priv_esc_str += f"	- {' + '.join(elevation_privs[key])}" + "\n"
 		
+			priv_esc_str += "\n"
+
+	priv_esc_str += f"[+] Number of users with dangerous privileges: {count_hashdump_users + count_elevation_users}" + "\n"
 	priv_esc_str += "\n"
-	priv_esc_str += f"[+] Number of users with dangerous privileges: {dangerous_users}" + "\n"
 
-	if dangerous_users > 0:
-		priv_esc_str += "\n"
-		priv_esc_str += f"[-] Common users that can dump password hashes: {len(users_dangerous_privs_df[(users_dangerous_privs_df['SELECT_ANY_DICTIONARY'].eq(True) & users_dangerous_privs_df['is_system_user'].eq(False))])}" + "\n"
+	if count_hashdump_users + count_elevation_users > 0:
 
-		users_dangerous_privs_dict = users_dangerous_privs_df[(users_dangerous_privs_df["SELECT_ANY_DICTIONARY"].eq(True) & users_dangerous_privs_df["is_system_user"].eq(False))].to_dict("index")
+		if users_might_hashdump and count_hashdump_users > 0:
+	
+			priv_esc_str += f"[-] Users that can dump password hashes: {count_hashdump_users}" + "\n"
 
-		for index in users_dangerous_privs_dict:
-			priv_esc_str += f"{users_dangerous_privs_dict[index]['USERNAME']}" + "\n"
-			for key in dangerous_privs:
-				if key == "SELECT_ANY_DICTIONARY":
-					priv_esc_str += f"	- {' + '.join(dangerous_privs[key])}" + "\n"
+			hashdump_users_dict = users_dangerous_privs_df[users_dangerous_privs_df["SELECT_ANY_DICTIONARY"] == True].to_dict("index")
+
+			for index in hashdump_users_dict:
+				priv_esc_str += f"{hashdump_users_dict[index]['USERNAME']}" + "\n"
+				for key in hashdump_privs:
+					if key == "SELECT_ANY_DICTIONARY":
+						priv_esc_str += f"	- {' + '.join(hashdump_privs[key])}" + "\n"
 		
-		priv_esc_str += "\n"
-		priv_esc_str += f"[-] Common uers that can elevate privileges: {len(users_dangerous_privs_df.loc[(users_dangerous_privs_df['CAN_ELEVATE_PRIVS'].eq(True) & users_dangerous_privs_df['is_system_user'].eq(False))])}" + "\n"
-		
-		users_dangerous_privs_dict = users_dangerous_privs_df.loc[(users_dangerous_privs_df["CAN_ELEVATE_PRIVS"].eq(True) & users_dangerous_privs_df["is_system_user"].eq(False))].to_dict("index")
-		for index in users_dangerous_privs_dict:
-			priv_esc_str += f"{users_dangerous_privs_dict[index]['USERNAME']}" + "\n"
-			for key in dangerous_privs:
-				if ((not key == "SELECT_ANY_DICTIONARY") and (users_dangerous_privs_dict[index][key] == True)):
-					priv_esc_str += f"	- {' + '.join(dangerous_privs[key])}" + "\n"
-		
-		users_dangerous_privs_df[users_dangerous_privs_df[list(dangerous_privs.keys())].any(axis=1)].to_excel(f"{outfolder}/DBPrivsAudit-Users.xlsx")
+			priv_esc_str += "\n"
+
+		if count_elevation_users > 0:
+
+			priv_esc_str += f"[-] Users that can elevate privileges: {count_elevation_users}" + "\n"
+			
+			elevation_users_dict = users_dangerous_privs_df[users_dangerous_privs_df["SELECT_ANY_DICTIONARY"].eq(True)].to_dict("index")
+
+			for index in elevation_users_dict:
+				priv_esc_str += f"{elevation_users_dict[index]['USERNAME']}" + "\n"
+				for key in elevation_privs:
+					if ((not key == "SELECT_ANY_DICTIONARY") and (elevation_users_dict[index][key] == True)):
+						priv_esc_str += f"	- {' + '.join(elevation_privs[key])}" + "\n"
+			
+			users_dangerous_privs_df[users_dangerous_privs_df[relevant_columns].any(axis=1)].to_excel(f"{outfolder}/DBPrivsAudit-Users.xlsx")
+
+			priv_esc_str += "\n"
 
 	users_dangerous_privs_df.to_excel(f"{outfolder}/DBPrivsAudit-EveryUser.xlsx")
 
 	priv_esc_str += "\n"
+	
 	print(priv_esc_str)
 
 	with open(outfolder+"/DB_PrivsAudit.txt", "w") as f:
@@ -719,12 +774,11 @@ def audit_data(dataframes, outfolder, active_users_audit, dbv, verbosity):
 	parameters_str += "\n"
 	parameters_str += f"[+] Missconfigurated Parameters: { len( parameters_check_df[ parameters_check_df['check_passed'] != True ] ) }" + "\n"
 	
-	if len( parameters_check_df[ parameters_check_df["check_passed"] != True ] ) > 0:
-		for dictionary in parameters_check_dict.values():
-			name = dictionary["NAME"]
-			value = dictionary["VALUE"]
-			comment = dictionary["comment"] 
-			parameters_str += f"{name.ljust(floor(OUTPUT_WITH/3))} value:{(' ' + value).ljust(floor(OUTPUT_WITH/3))} ({comment})" + "\n"
+	for dictionary in parameters_check_dict.values():
+		name = dictionary["NAME"]
+		value = dictionary["VALUE"]
+		comment = dictionary["comment"] 
+		parameters_str += f"{name.ljust(floor(OUTPUT_WITH/3))} value:{(' ' + value).ljust(floor(OUTPUT_WITH/3))} ({comment})" + "\n"
 	
 	parameters_check_df.to_excel(f"{outfolder}/Parameters.xlsx")
 
